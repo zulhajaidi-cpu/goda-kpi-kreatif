@@ -62,7 +62,8 @@ const supabaseClient = window.supabase.createClient(
 
 let authUser = null;
 let authProfile = null;
-let todosData = [];let people=[{id:'zulhaj',name:'Zulhaj',role:'SPV Marketing Creative',initials:'Z',cls:'zulhaj'},{id:'roro',name:'Roro Diana',role:'Content Creator',initials:'R',cls:'roro'},{id:'septian',name:'Septian',role:'Video Editor',initials:'S',cls:'septian'},{id:'raihan',name:'Raihan',role:'Graphic Designer',initials:'R',cls:'raihan'},{id:'awan',name:'Awan',role:'Graphic Designer',initials:'A',cls:'awan'},{id:'nanda',name:'Nanda',role:'Ecommerce Specialist',initials:'N',cls:'nanda'},{id:'siswanto',name:'Siswanto',role:'Staff Operasional Marketing',initials:'S',cls:'siswanto'}];
+let todosData = [];
+let progressData = [];let people=[{id:'zulhaj',name:'Zulhaj',role:'SPV Marketing Creative',initials:'Z',cls:'zulhaj'},{id:'roro',name:'Roro Diana',role:'Content Creator',initials:'R',cls:'roro'},{id:'septian',name:'Septian',role:'Video Editor',initials:'S',cls:'septian'},{id:'raihan',name:'Raihan',role:'Graphic Designer',initials:'R',cls:'raihan'},{id:'awan',name:'Awan',role:'Graphic Designer',initials:'A',cls:'awan'},{id:'nanda',name:'Nanda',role:'Ecommerce Specialist',initials:'N',cls:'nanda'},{id:'siswanto',name:'Siswanto',role:'Staff Operasional Marketing',initials:'S',cls:'siswanto'}];
 const accounts={zulhaj:{password:'spvmarketingcreative',personId:'zulhaj'},roro:{password:'contentcreator',personId:'roro'},septian:{password:'videoeditor',personId:'septian'},raihan:{password:'graphicdesigner1',personId:'raihan'},awan:{password:'graphicdesigner2',personId:'awan'},nanda:{password:'ecommerce',personId:'nanda'},siswanto:{password:'staffoperasionalmarketing',personId:'siswanto'}};
 let teamKpi=[
 {no:1,project:'Produksi 20 content marketing dan target FYP content hingga 500k views',owner:['roro'],support:['septian'],note:'Produksi konten bulanan dan performa konten utama.'},{no:2,project:'Pra-produksi dan final concept Godasentara Episode 2',owner:['septian'],support:['roro'],note:'Lokasi, konsep, dan kesiapan pra-produksi.'},{no:3,project:'Target marketplace Rp400 juta, minimal 70 unit sold, dan 150 merchandise sold',owner:['nanda'],support:['siswanto'],note:'Penjualan marketplace dan merchandise.'},{no:4,project:'Kontrol harga online, pelaporan, dan pembelian harga terlalu rendah',owner:['nanda'],support:['siswanto'],note:'Monitoring harga marketplace dan validasi.'},{no:5,project:'Target TikTok Shop 30 unit sold',owner:['nanda'],support:['siswanto'],note:'Peningkatan penjualan TikTok Shop.'},{no:6,project:'Desain kartu garansi per type',owner:['raihan'],support:['awan'],note:'Desain kartu garansi tiap tipe produk.'},{no:7,project:'Desain material promosi 2D all type',owner:['raihan','awan'],support:[],note:'Poster, infografis, dan materi promosi rutin.'},{no:8,project:'Desain merchandise baru GODA: helm, korek api, laptop sticker, dan polo shirt',owner:['awan'],support:['raihan'],note:'Pengembangan desain merchandise baru.'},{no:9,project:'Realisasi kerja sama leasing Kreditplus dan HCI',owner:['zulhaj'],support:['roro','nanda'],note:'Koordinasi realisasi kerja sama dan implementasi.'},{no:10,project:'Realisasi partisipasi design & work-related AI Tools Course',owner:['zulhaj'],support:['septian'],note:'Pembelajaran AI tools untuk workflow creative.'}
@@ -98,7 +99,7 @@ function resolveLogin(username,password){let store=profileStore();for(let id of 
 function usernameTaken(username,personId){let u=username.toLowerCase(),store=profileStore();for(let id of Object.keys(store)){if(id!==personId&&store[id].username&&store[id].username.toLowerCase()===u)return true}for(let [name,acc] of Object.entries(accounts)){let override=store[acc.personId];if(acc.personId!==personId&&!override&&name.toLowerCase()===u)return true}return false}
 function fileToDataURL(file){return new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
 function load(){try{return JSON.parse(localStorage.getItem('goda-kpi-room-v3'))||{}}catch(e){return {}}} function save(o){localStorage.setItem('goda-kpi-room-v3',JSON.stringify(o))} function key(id){return `${period()}__${id}`} function room(id){let o=load(),k=key(id); if(!o[k])o[k]={todos:[],messages:[],progress:[],helps:[],mood:[]}; return o[k]} function updRoom(id,fn){let o=load(),k=key(id); if(!o[k])o[k]={todos:[],messages:[],progress:[],helps:[],mood:[]}; fn(o[k]); save(o); renderIndividualRoom(); renderAllCore()}
-function expOf(id){let ms=missions().filter(m=>m.pic.includes(id)),r=room(id),done=ms.filter(m=>m.status==='Selesai'),before=done.filter(m=>m.completedAt&&diff(d(m.deadline),d(m.completedAt))>0).length,on=done.filter(m=>m.completedAt&&diff(d(m.deadline),d(m.completedAt))===0).length,progress=(r.progress||[]).length,allRooms=load(),helps=Object.keys(allRooms).filter(k=>k.startsWith(period()+'__')).flatMap(k=>allRooms[k].helps||[]).filter(h=>h.helperId===id).length,pen=ms.filter(m=>over(m)&&!(r.progress||[]).length).length;return {base:done.length*10,before:before*10,on:on*5,progress:progress*3,help:helps*8,penalty:pen*-5,total:done.length*10+before*10+on*5+progress*3+helps*8-pen*5,done:done.length,before,on,progress,helps,pen,missions:ms.length,impact:done.filter(m=>m.impact).length,overdue:ms.filter(over).length}}
+function expOf(id){let ms=missions().filter(m=>m.pic.includes(id)),r=room(id),done=ms.filter(m=>m.status==='Selesai'),before=done.filter(m=>m.completedAt&&diff(d(m.deadline),d(m.completedAt))>0).length,on=done.filter(m=>m.completedAt&&diff(d(m.deadline),d(m.completedAt))===0).length,progress=progressData.filter(p=>p.ownerUsername===id).length,allRooms=load(),helps=Object.keys(allRooms).filter(k=>k.startsWith(period()+'__')).flatMap(k=>allRooms[k].helps||[]).filter(h=>h.helperId===id).length,pen=ms.filter(m=>over(m)&&!(r.progress||[]).length).length;return {base:done.length*10,before:before*10,on:on*5,progress:progress*3,help:helps*8,penalty:pen*-5,total:done.length*10+before*10+on*5+progress*3+helps*8-pen*5,done:done.length,before,on,progress,helps,pen,missions:ms.length,impact:done.filter(m=>m.impact).length,overdue:ms.filter(over).length}}
 function badges(id,mvpId){let x=expOf(id),r=room(id),days=[...new Set((r.progress||[]).map(p=>p.createdAt.slice(0,10)))],arr=[]; if(x.before>=5)arr.push(['Fast Finisher','5 task selesai sebelum deadline','ok','⚡']); if(x.overdue===0&&x.missions>0)arr.push(['No Overdue Week','Tidak ada task terlambat aktif','ok','🛡️']); if(x.helps>=3)arr.push(['Team Supporter','Membantu minimal 3 task anggota lain','info','🤝']); if(days.length>=5)arr.push(['Consistency Player','Update progress 5 hari berbeda','warn','🔥']); if(x.impact>=1)arr.push(['High Impact Player','Task high impact selesai','info','⭐']); if(x.done>=8&&x.overdue<=1)arr.push(['Silent Killer','Banyak task selesai tanpa drama','neutral','🥷']); if(id===mvpId)arr.push(['MVP of The Month','Performance tertinggi bulan ini','warn','👑']); return arr}
 function metrics(id){let x=expOf(id),rate=x.missions?x.done/x.missions:0,avg=0,done=missions().filter(m=>m.pic.includes(id)&&m.status==='Selesai'); if(done.length)avg=done.map(m=>diff(d(m.deadline),d(m.completedAt||m.deadline))).reduce((a,b)=>a+b,0)/done.length;return {...x,rate,avg,score:Math.max(0,Math.round(x.total+rate*40+Math.max(0,avg)*3))}}
 function mvpId(){if(!hasData())return null;return people.filter(p=>p.id!=='zulhaj').map(p=>({id:p.id,m:metrics(p.id)})).sort((a,b)=>b.m.score-a.m.score||b.m.done-a.m.done)[0]?.id}
@@ -311,7 +312,41 @@ todosData = (todoRows || []).map(t => ({
   createdByName: t.creator?.full_name || "",
   createdAt: t.created_at,
   updatedAt: t.updated_at
-}));console.log("Supabase KPI data loaded:", {
+}));
+    
+    const { data: progressRows, error: progressError } = await supabaseClient
+  .from("progress_updates")
+  .select(`
+    id,
+    period_id,
+    owner_id,
+    text,
+    created_by,
+    created_at,
+    owner:profiles!progress_updates_owner_id_fkey(username, full_name),
+    creator:profiles!progress_updates_created_by_fkey(username, full_name, role_title, initials, color_class)
+  `)
+  .eq("period_id", periodId)
+  .order("created_at", { ascending: false });
+
+if (progressError) {
+  console.error("Progress load error:", progressError);
+  return;
+}
+
+progressData = (progressRows || []).map(p => ({
+  dbId: p.id,
+  ownerUsername: p.owner?.username || "",
+  text: p.text || "",
+  createdByUsername: p.creator?.username || "",
+  createdByName: p.creator?.full_name || "",
+  createdByRole: p.creator?.role_title || "",
+  createdByInitials: p.creator?.initials || "?",
+  createdByClass: p.creator?.color_class || "neutral",
+  createdAt: p.created_at
+}));
+    
+    console.log("Supabase KPI data loaded:", {
     people,
     teamKpi,
     individualKpi,
@@ -415,7 +450,7 @@ function renderPeople(){ $('peopleGrid').innerHTML=people.map(p=>`<div class="ca
 function renderProfile(){let p=pmap[state.activePerson],data=kpis(p.id),m=metrics(p.id),mvp=mvpId(),b=badges(p.id,mvp);$('profilePanel').innerHTML=`${avatarHtml(p.id,'avatar')}<h3>${p.name}</h3><p class="hint">${p.role}</p><div class="mini"><div class="minibox"><b>${data.length}</b><span>KPI</span></div><div class="minibox"><b>${m.total}</b><span>EXP</span></div><div class="minibox"><b>${m.done}/${m.missions}</b><span>Mission</span></div><div class="minibox"><b>${p.id==='zulhaj'?'-':m.score}</b><span>${p.id==='zulhaj'?'Leader / Non Ranking':'Score'}</span></div><div class="minibox"><b>${b.length}</b><span>Badge</span></div><div class="minibox"><b>${m.progress}</b><span>Update Progress</span></div></div><div class="bar"><i style="width:${Math.round(m.rate*100)}%"></i></div><div class="badgelist" style="margin-top:14px">${b.length?b.map(x=>`<div class="badgeitem"><span class="pill ${x[2]}"><span class="badge-icon">${x[3]||''}</span>${x[0]}</span><div class="hint">${x[1]}</div></div>`).join(''):'<div class="empty" style="padding:18px">Belum ada badge aktif.</div>'}</div>`; $('individualTableBody').innerHTML=data.length?data.map((x,i)=>`<tr><td><b>${i+1}</b></td><td><b>${x[0]}</b></td><td>${x[1]}</td><td class="weight">${x[2]}%</td></tr>`).join(''):`<tr><td colspan="4"><div class="empty">KPI Individu ${p.name} pada ${plabel()} masih kosong.</div></td></tr>`}
 function renderIndividualRoom(){let p=pmap[state.activePerson],r=room(p.id),c=current(),isOwner=state.currentUser===p.id,latestMood=(r.mood||[]).slice(-1)[0],helperOptions=people.filter(x=>x.id!==p.id).map(x=>`<option value="${x.id}">${x.name} — ${x.role}</option>`).join('');
                                 
-                                let personTodos = todosData.filter(t => t.ownerUsername === p.id);$('individualRoom').innerHTML=`<div class="card roomcard"><div class="head"><div><h2>Daily To Do — ${p.name}</h2><p class="hint">Task harian personal dengan deadline, status, priority, category, requester, dan deskripsi.</p></div><span class="pill neutral">${personTodos.filter(t => (t.status || '').toLowerCase() === 'done').length}/${personTodos.length} Done</span></div>${isOwner||state.currentUser==='zulhaj'?`<button class="btn" id="addTodoBtn" style="margin-bottom:12px">Tambah To Do Detail</button>`:`<div class="hint" style="margin-bottom:12px">To do hanya bisa ditulis oleh ${p.name} atau Zulhaj.</div>`}<div class="todo">${
+                                let personTodos = todosData.filter(t => t.ownerUsername === p.id);let personProgress = progressData.filter(x => x.ownerUsername === p.id);$('individualRoom').innerHTML=`<div class="card roomcard"><div class="head"><div><h2>Daily To Do — ${p.name}</h2><p class="hint">Task harian personal dengan deadline, status, priority, category, requester, dan deskripsi.</p></div><span class="pill neutral">${personTodos.filter(t => (t.status || '').toLowerCase() === 'done').length}/${personTodos.length} Done</span></div>${isOwner||state.currentUser==='zulhaj'?`<button class="btn" id="addTodoBtn" style="margin-bottom:12px">Tambah To Do Detail</button>`:`<div class="hint" style="margin-bottom:12px">To do hanya bisa ditulis oleh ${p.name} atau Zulhaj.</div>`}<div class="todo">${
   personTodos.length
     ? personTodos.map((t,i)=>{
         let status = t.status || 'backlog',
