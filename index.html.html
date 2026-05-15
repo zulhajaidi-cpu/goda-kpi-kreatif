@@ -29,7 +29,7 @@
   </style>
 </head>
 <body>
-  <section class="login" id="loginScreen"><div class="card logincard"><div class="logo" style="margin-bottom:16px">G</div><p class="eyebrow">GODA KPI Access</p><h2>Login Dashboard</h2><p class="hint">Masuk sesuai akun anggota tim. Nama dan profil message otomatis mengikuti user yang login. Ini simulasi client-side, bukan sistem security produksi.</p><div class="grid"><label>Email</label><input id="loginUser" placeholder="contoh: zulhajdaqu@gmail.com"><label>Password</label><input id="loginPassword" type="password" placeholder="password"><button class="btn" id="loginBtn">Login</button><div id="loginError" style="color:#ffb0b0;font-size:12px;font-weight:850;min-height:18px"></div></div></div></section>
+  <section class="login" id="loginScreen"><div class="card logincard"><div class="logo" style="margin-bottom:16px">G</div><p class="eyebrow">GODA KPI Access</p><h2>Login Dashboard</h2><p class="hint">Masuk sesuai akun anggota tim. Gunakan user guest untuk akses lihat saja.</p><div class="grid"><label>Email / User</label><input id="loginUser" placeholder="contoh: zulhajdaqu@gmail.com atau guest"><label>Password</label><input id="loginPassword" type="password" placeholder="password"><button class="btn" id="loginBtn">Login</button><div id="loginError" style="color:#ffb0b0;font-size:12px;font-weight:850;min-height:18px"></div></div></div></section>
 
   <main class="app">
     <header class="top"><div class="brand"><div class="logo">G</div><div><p class="eyebrow">Marketing Creative Department</p><h1>GODA KPI Monitoring Dashboard</h1><p class="sub">KPI, EXP, badge, reward, team quest, mood check-in, dan personal room.</p></div></div><div class="control"><label>Periode</label><select id="monthSelect"><option value="2026-05" selected>Mei 2026</option><option value="2026-06">Juni 2026 — Kosong</option><option value="2026-07">Juli 2026 — Kosong</option><option value="2026-08">Agustus 2026 — Kosong</option><option value="2026-09">September 2026 — Kosong</option><option value="2026-10">Oktober 2026 — Kosong</option><option value="2026-11">November 2026 — Kosong</option><option value="2026-12">Desember 2026 — Kosong</option></select><div class="current" id="currentUserBadge"></div><button class="btn2" id="profileBtn">Profil</button><button class="btn2" id="logoutBtn">Logout</button></div></header>
@@ -64,6 +64,7 @@ const supabaseClient = window.supabase.createClient(
 
 let authUser = null;
 let authProfile = null;
+const GUEST_LOGIN = { username: "guest", email: "guest@godaindonesia.com", password: "godaindonesia" };
 let todosData = [];
 let progressData = [];
 let teamMessagesData = [];
@@ -102,6 +103,8 @@ function moodLabel(v){return {happy:'😊 Happy',sad:'😢 Sad',tired:'😩 Tire
 function todoStatusLabel(v){return {backlog:'Backlog',process:'Process',review:'Review',done:'Done',cancel:'Cancel'}[v]||v}
 function todoPriorityLabel(v){return {high:'High',medium:'Medium',low:'Low'}[v]||v}
 function current(){return personDisplay(state.currentUser||'zulhaj')}
+function isGuest(){return (authProfile?.username||state.currentUser)==='guest'}
+function canWrite(){return !isGuest()}
 function resolveLogin(username,password){let store=profileStore();for(let id of Object.keys(store)){let pr=store[id];if(pr.username&&pr.password&&pr.username.toLowerCase()===username&&pr.password===password)return {personId:id}}let a=accounts[username];if(!a)return null;let override=store[a.personId];if(override&&(override.username||override.password))return null;return a.password===password?a:null}
 function usernameTaken(username,personId){let u=username.toLowerCase(),store=profileStore();for(let id of Object.keys(store)){if(id!==personId&&store[id].username&&store[id].username.toLowerCase()===u)return true}for(let [name,acc] of Object.entries(accounts)){let override=store[acc.personId];if(acc.personId!==personId&&!override&&name.toLowerCase()===u)return true}return false}
 function fileToDataURL(file){return new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
@@ -150,6 +153,7 @@ function mvpId(){if(!hasData())return null;return people.filter(p=>p.id!=='zulha
   }
 
   people = (profileRows || [])
+    .filter(p => p.username !== "guest" && p.role_type !== "viewer")
     .sort((a, b) => (profileOrder[a.username] || 99) - (profileOrder[b.username] || 99))
     .map(p => ({
       id: p.username,
@@ -468,20 +472,31 @@ async function renderAuth() {
   if (!authUser || !authProfile) {
     $("loginScreen").classList.add("show");
     $("currentUserBadge").innerHTML = "<span>Belum login</span>";
+    $("profileBtn").style.display = "";
     return;
   }
 
   $("loginScreen").classList.remove("show");
 
-  $("currentUserBadge").innerHTML = `
+  $("currentUserBadge").innerHTML = isGuest()
+    ? '<span class="miniava neutral">G</span><span>Guest View</span><span class="pill neutral">Read Only</span>'
+    : `
     <span class="miniava ${authProfile.color_class || "neutral"}">${authProfile.initials || "?"}</span>
     <span>${esc(authProfile.full_name)}</span>
   `;
+  $("profileBtn").style.display = isGuest() ? "none" : "";
 }
 
 async function login() {
-  const email = $("loginUser").value.trim().toLowerCase();
+  const loginName = $("loginUser").value.trim().toLowerCase();
   const password = $("loginPassword").value;
+  const isGuestLogin = loginName === GUEST_LOGIN.username;
+  const email = isGuestLogin ? GUEST_LOGIN.email : loginName;
+
+  if (isGuestLogin && password !== GUEST_LOGIN.password) {
+    $("loginError").textContent = "User guest atau password salah.";
+    return;
+  }
 
   const { data, error } = await supabaseClient.auth.signInWithPassword({
     email,
@@ -581,6 +596,7 @@ function openMission(id){
   $('modalNote').value = m.note || '';
 
   $('missionModal').classList.add('show');
+  applyReadonlyMode();
 }
 
 function closeMission(){
@@ -589,6 +605,7 @@ function closeMission(){
 }
 
 async function saveMission(){
+  if (isGuest()) return;
   let m = missions().find(x => x.id === state.selectedMissionId);
   if (!m) return;
 
@@ -664,6 +681,7 @@ function closeTodoModal(){
   state.editTodoId = null;
 }
 async function saveTodo(){
+  if (isGuest()) return;
   let target = state.todoTarget || state.activePerson;
 
   if (!(state.currentUser === target || state.currentUser === 'zulhaj')) return;
@@ -747,10 +765,10 @@ async function saveTodo(){
   renderIndividualRoom();
   renderAllCore();
 }
-function openProfileModal(){if(!state.currentUser)return;let c=current();$('profileUsername').value=c.username||'';$('profilePassword').value='';$('profilePhoto').value='';$('profilePreview').innerHTML=avatarHtml(state.currentUser,'avatar');$('profileError').textContent='';$('profileModal').classList.add('show')}
+function openProfileModal(){if(!state.currentUser||isGuest())return;let c=current();$('profileUsername').value=c.username||'';$('profilePassword').value='';$('profilePhoto').value='';$('profilePreview').innerHTML=avatarHtml(state.currentUser,'avatar');$('profileError').textContent='';$('profileModal').classList.add('show')}
 function closeProfileModal(){$('profileModal').classList.remove('show')}
 async function saveProfile(){
-  if(!state.currentUser)return;
+  if(!state.currentUser||isGuest())return;
 
   let id=state.currentUser,
       username=$('profileUsername').value.trim().toLowerCase(),
@@ -788,6 +806,15 @@ async function saveProfile(){
   closeProfileModal();
   renderAll();
 }
+function applyReadonlyMode(){
+  const ro = isGuest();
+  document.body.classList.toggle('guest-mode', ro);
+  if ($('profileBtn')) $('profileBtn').style.display = ro ? 'none' : '';
+  ['modalStatus','modalDeadline','modalCompletedAt','modalNote','todoTitle','todoDeadline','todoStatus','todoPriority','todoCategory','todoRequester','todoDescription','profileUsername','profilePassword','profilePhoto'].forEach(id=>{let el=$(id);if(el)el.disabled=ro});
+  ['saveMission','saveTodoBtn','saveProfileBtn'].forEach(id=>{let el=$(id);if(el)el.style.display=ro?'none':''});
+  document.querySelectorAll('#individualRoom input,#individualRoom textarea,#individualRoom select').forEach(el=>el.disabled=ro);
+  document.querySelectorAll('#individualRoom button').forEach(el=>el.style.display=ro?'none':'');
+}
 function renderAll(){
   renderSummary();
   renderRanking();
@@ -799,6 +826,7 @@ function renderAll(){
   renderProfile();
   renderIndividualRoom();
   renderMissionBoard();
+  applyReadonlyMode();
 }
 function wire(){document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{state.activeTab=b.dataset.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===state.activeTab))});$('printBtn').onclick=()=>window.print();$('loginBtn').onclick=login;$('profileBtn').onclick=openProfileModal;$('logoutBtn').onclick=logout;$('closeProfileModal').onclick=closeProfileModal;$('cancelProfileModal').onclick=closeProfileModal;$('saveProfileBtn').onclick=saveProfile;$('closeTodoModal').onclick=closeTodoModal;$('cancelTodoModal').onclick=closeTodoModal;$('saveTodoBtn').onclick=saveTodo;$('loginPassword').onkeydown=e=>{if(e.key==='Enter')login()};$('monthSelect').onchange = async () => {
   if (authUser && authProfile) {
@@ -807,7 +835,7 @@ function wire(){document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{stat
 
   fillFilters();
   renderAll();
-};['teamSearch','teamOwnerFilter','teamSupportFilter'].forEach(id=>{$(id).oninput=renderTeam;$(id).onchange=renderTeam});['missionSearch','missionPicFilter','missionStatusFilter'].forEach(id=>{$(id).oninput=renderMissionBoard;$(id).onchange=renderMissionBoard});$('peopleGrid').onclick=e=>{let c=e.target.closest('[data-person]');if(c){state.activePerson=c.dataset.person;renderPeople();renderProfile();renderIndividualRoom()}};$('missionList').onclick=e=>{let b=e.target.closest('[data-open]');if(b){openMission(Number(b.dataset.open));return}let card=e.target.closest('[data-project]');if(card){state.selectedMissionProject=state.selectedMissionProject===card.dataset.project?null:card.dataset.project;renderMissionBoard();return}};$('deadlineAlerts').onclick=e=>{let card=e.target.closest('[data-alert-open]');if(card)openMission(Number(card.dataset.alertOpen))};$('deadlineAlerts').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){let card=e.target.closest('[data-alert-open]');if(card){e.preventDefault();openMission(Number(card.dataset.alertOpen))}}};$('closeModal').onclick=closeMission;$('cancelModal').onclick=closeMission;$('saveMission').onclick=saveMission;$('missionModal').onclick=e=>{if(e.target.id==='missionModal')closeMission()};$('individualRoom').onclick=async e=>{if(e.target.id==='addTodoBtn'){openTodoModal();return}let t=e.target.closest('[data-toggle-todo]');
+};['teamSearch','teamOwnerFilter','teamSupportFilter'].forEach(id=>{$(id).oninput=renderTeam;$(id).onchange=renderTeam});['missionSearch','missionPicFilter','missionStatusFilter'].forEach(id=>{$(id).oninput=renderMissionBoard;$(id).onchange=renderMissionBoard});$('peopleGrid').onclick=e=>{let c=e.target.closest('[data-person]');if(c){state.activePerson=c.dataset.person;renderPeople();renderProfile();renderIndividualRoom();applyReadonlyMode()}};$('missionList').onclick=e=>{let b=e.target.closest('[data-open]');if(b){openMission(Number(b.dataset.open));return}let card=e.target.closest('[data-project]');if(card){state.selectedMissionProject=state.selectedMissionProject===card.dataset.project?null:card.dataset.project;renderMissionBoard();return}};$('deadlineAlerts').onclick=e=>{let card=e.target.closest('[data-alert-open]');if(card)openMission(Number(card.dataset.alertOpen))};$('deadlineAlerts').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){let card=e.target.closest('[data-alert-open]');if(card){e.preventDefault();openMission(Number(card.dataset.alertOpen))}}};$('closeModal').onclick=closeMission;$('cancelModal').onclick=closeMission;$('saveMission').onclick=saveMission;$('missionModal').onclick=e=>{if(e.target.id==='missionModal')closeMission()};$('individualRoom').onclick=async e=>{if(isGuest())return;if(e.target.id==='addTodoBtn'){openTodoModal();return}let t=e.target.closest('[data-toggle-todo]');
 if(t){
   if(!(state.currentUser===state.activePerson||state.currentUser==='zulhaj'))return;
 
