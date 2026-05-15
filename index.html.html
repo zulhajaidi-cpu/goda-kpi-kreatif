@@ -61,7 +61,8 @@ const supabaseClient = window.supabase.createClient(
 );
 
 let authUser = null;
-let authProfile = null;let people=[{id:'zulhaj',name:'Zulhaj',role:'SPV Marketing Creative',initials:'Z',cls:'zulhaj'},{id:'roro',name:'Roro Diana',role:'Content Creator',initials:'R',cls:'roro'},{id:'septian',name:'Septian',role:'Video Editor',initials:'S',cls:'septian'},{id:'raihan',name:'Raihan',role:'Graphic Designer',initials:'R',cls:'raihan'},{id:'awan',name:'Awan',role:'Graphic Designer',initials:'A',cls:'awan'},{id:'nanda',name:'Nanda',role:'Ecommerce Specialist',initials:'N',cls:'nanda'},{id:'siswanto',name:'Siswanto',role:'Staff Operasional Marketing',initials:'S',cls:'siswanto'}];
+let authProfile = null;
+let todosData = [];let people=[{id:'zulhaj',name:'Zulhaj',role:'SPV Marketing Creative',initials:'Z',cls:'zulhaj'},{id:'roro',name:'Roro Diana',role:'Content Creator',initials:'R',cls:'roro'},{id:'septian',name:'Septian',role:'Video Editor',initials:'S',cls:'septian'},{id:'raihan',name:'Raihan',role:'Graphic Designer',initials:'R',cls:'raihan'},{id:'awan',name:'Awan',role:'Graphic Designer',initials:'A',cls:'awan'},{id:'nanda',name:'Nanda',role:'Ecommerce Specialist',initials:'N',cls:'nanda'},{id:'siswanto',name:'Siswanto',role:'Staff Operasional Marketing',initials:'S',cls:'siswanto'}];
 const accounts={zulhaj:{password:'spvmarketingcreative',personId:'zulhaj'},roro:{password:'contentcreator',personId:'roro'},septian:{password:'videoeditor',personId:'septian'},raihan:{password:'graphicdesigner1',personId:'raihan'},awan:{password:'graphicdesigner2',personId:'awan'},nanda:{password:'ecommerce',personId:'nanda'},siswanto:{password:'staffoperasionalmarketing',personId:'siswanto'}};
 let teamKpi=[
 {no:1,project:'Produksi 20 content marketing dan target FYP content hingga 500k views',owner:['roro'],support:['septian'],note:'Produksi konten bulanan dan performa konten utama.'},{no:2,project:'Pra-produksi dan final concept Godasentara Episode 2',owner:['septian'],support:['roro'],note:'Lokasi, konsep, dan kesiapan pra-produksi.'},{no:3,project:'Target marketplace Rp400 juta, minimal 70 unit sold, dan 150 merchandise sold',owner:['nanda'],support:['siswanto'],note:'Penjualan marketplace dan merchandise.'},{no:4,project:'Kontrol harga online, pelaporan, dan pembelian harga terlalu rendah',owner:['nanda'],support:['siswanto'],note:'Monitoring harga marketplace dan validasi.'},{no:5,project:'Target TikTok Shop 30 unit sold',owner:['nanda'],support:['siswanto'],note:'Peningkatan penjualan TikTok Shop.'},{no:6,project:'Desain kartu garansi per type',owner:['raihan'],support:['awan'],note:'Desain kartu garansi tiap tipe produk.'},{no:7,project:'Desain material promosi 2D all type',owner:['raihan','awan'],support:[],note:'Poster, infografis, dan materi promosi rutin.'},{no:8,project:'Desain merchandise baru GODA: helm, korek api, laptop sticker, dan polo shirt',owner:['awan'],support:['raihan'],note:'Pengembangan desain merchandise baru.'},{no:9,project:'Realisasi kerja sama leasing Kreditplus dan HCI',owner:['zulhaj'],support:['roro','nanda'],note:'Koordinasi realisasi kerja sama dan implementasi.'},{no:10,project:'Realisasi partisipasi design & work-related AI Tools Course',owner:['zulhaj'],support:['septian'],note:'Pembelajaran AI tools untuk workflow creative.'}
@@ -262,7 +263,48 @@ function mvpId(){if(!hasData())return null;return people.filter(p=>p.id!=='zulha
     impact: !!m.is_high_impact
   }));
 
-  console.log("Supabase KPI data loaded:", {
+  const { data: todoRows, error: todoError } = await supabaseClient
+  .from("todos")
+  .select(`
+    id,
+    owner_id,
+    title,
+    description,
+    deadline,
+    status,
+    priority,
+    category,
+    requester,
+    created_by,
+    updated_by,
+    created_at,
+    updated_at,
+    owner:profiles!todos_owner_id_fkey(username, full_name),
+    creator:profiles!todos_created_by_fkey(username, full_name)
+  `)
+  .eq("period_id", periodId)
+  .order("created_at", { ascending: false });
+
+if (todoError) {
+  console.error("Todos load error:", todoError);
+  return;
+}
+
+todosData = (todoRows || []).map(t => ({
+  dbId: t.id,
+  ownerUsername: t.owner?.username || "",
+  title: t.title,
+  description: t.description || "",
+  deadline: t.deadline || "",
+  status: t.status || "backlog",
+  priority: t.priority || "medium",
+  category: t.category || "Daily",
+  requester: t.requester || "",
+  createdByUsername: t.creator?.username || "",
+  createdByName: t.creator?.full_name || "",
+  createdAt: t.created_at,
+  updatedAt: t.updated_at
+}));console.log("Supabase KPI data loaded:", {
     people,
     teamKpi,
     individualKpi,
