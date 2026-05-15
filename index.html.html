@@ -332,8 +332,14 @@ async function login() {
   $("loginError").textContent = "";
   $("loginPassword").value = "";
 
-  await renderAuth();
-  renderAll();
+await renderAuth();
+
+if (authUser && authProfile) {
+  await loadDashboardDataFromSupabase();
+}
+
+fillFilters();
+renderAll();
 }
 
 async function logout() {
@@ -360,7 +366,72 @@ function renderPeople(){ $('peopleGrid').innerHTML=people.map(p=>`<div class="ca
 function renderProfile(){let p=pmap[state.activePerson],data=kpis(p.id),m=metrics(p.id),mvp=mvpId(),b=badges(p.id,mvp);$('profilePanel').innerHTML=`${avatarHtml(p.id,'avatar')}<h3>${p.name}</h3><p class="hint">${p.role}</p><div class="mini"><div class="minibox"><b>${data.length}</b><span>KPI</span></div><div class="minibox"><b>${m.total}</b><span>EXP</span></div><div class="minibox"><b>${m.done}/${m.missions}</b><span>Mission</span></div><div class="minibox"><b>${p.id==='zulhaj'?'-':m.score}</b><span>${p.id==='zulhaj'?'Leader / Non Ranking':'Score'}</span></div><div class="minibox"><b>${b.length}</b><span>Badge</span></div><div class="minibox"><b>${m.progress}</b><span>Update Progress</span></div></div><div class="bar"><i style="width:${Math.round(m.rate*100)}%"></i></div><div class="badgelist" style="margin-top:14px">${b.length?b.map(x=>`<div class="badgeitem"><span class="pill ${x[2]}"><span class="badge-icon">${x[3]||''}</span>${x[0]}</span><div class="hint">${x[1]}</div></div>`).join(''):'<div class="empty" style="padding:18px">Belum ada badge aktif.</div>'}</div>`; $('individualTableBody').innerHTML=data.length?data.map((x,i)=>`<tr><td><b>${i+1}</b></td><td><b>${x[0]}</b></td><td>${x[1]}</td><td class="weight">${x[2]}%</td></tr>`).join(''):`<tr><td colspan="4"><div class="empty">KPI Individu ${p.name} pada ${plabel()} masih kosong.</div></td></tr>`}
 function renderIndividualRoom(){let p=pmap[state.activePerson],r=room(p.id),c=current(),isOwner=state.currentUser===p.id,latestMood=(r.mood||[]).slice(-1)[0],helperOptions=people.filter(x=>x.id!==p.id).map(x=>`<option value="${x.id}">${x.name} — ${x.role}</option>`).join('');$('individualRoom').innerHTML=`<div class="card roomcard"><div class="head"><div><h2>Daily To Do — ${p.name}</h2><p class="hint">Task harian personal dengan deadline, status, priority, category, requester, dan deskripsi.</p></div><span class="pill neutral">${(r.todos||[]).filter(t=>(t.status||'').toLowerCase()==='done'||t.done).length}/${(r.todos||[]).length} Done</span></div>${isOwner||state.currentUser==='zulhaj'?`<button class="btn" id="addTodoBtn" style="margin-bottom:12px">Tambah To Do Detail</button>`:`<div class="hint" style="margin-bottom:12px">To do hanya bisa ditulis oleh ${p.name} atau Zulhaj.</div>`}<div class="todo">${(r.todos||[]).length?r.todos.map((t,i)=>{let status=t.status|| (t.done?'done':'backlog'),title=t.title||t.text||'Untitled To Do',priority=t.priority||'medium',canEdit=isOwner||state.currentUser==='zulhaj';return `<div class="todoitem ${status==='done'?'done':''}"><input class="check" type="checkbox" ${status==='done'?'checked':''} data-toggle-todo="${i}" ${canEdit?'':'disabled'}><div class="todo-detail"><div class="todo-title">${esc(title)}</div><div class="todo-meta"><span class="pill status-${status}">${todoStatusLabel(status)}</span><span class="pill prio-${priority}">${todoPriorityLabel(priority)}</span><span class="pill neutral">${esc(t.category||'Daily')}</span>${t.deadline?`<span class="pill info">Deadline ${fmt(t.deadline)}</span>`:''}${t.requester?`<span class="pill neutral">Req: ${esc(t.requester)}</span>`:''}</div>${t.description?`<div class="todo-desc">${esc(t.description)}</div>`:''}<div class="micro">Dibuat ${stamp(t.createdAt)}${t.createdBy?` oleh ${esc(personDisplay(t.createdBy).name)}`:''}</div></div>${canEdit?`<button class="icon" data-delete-todo="${i}">×</button>`:''}</div>`}).join(''):'<div class="empty">Belum ada to do.</div>'}</div></div><div class="card roomcard"><div class="head"><div><h2>Progress Update</h2><p class="hint">Hanya ${p.name} yang bisa menulis progress update di ruang ini. Setiap update mendapat +3 EXP.</p></div><span class="pill info">+3 EXP</span></div>${isOwner?`<div class="current" style="width:max-content;margin-bottom:10px"><span class="miniava ${c.cls}">${c.initials}</span><span>Update sebagai ${c.name}</span></div><textarea id="progressText" placeholder="Tulis update progress pekerjaan hari ini..."></textarea><button class="btn" id="sendProgressBtn" style="margin-top:10px">Update Progress +3 EXP</button>`:`<div class="empty">Progress update hanya bisa ditulis oleh ${p.name}. Kamu tetap bisa menulis message di kolom Team Message.</div>`}<div class="msg" style="margin-top:12px">${(r.progress||[]).slice().reverse().map((msg,idx)=>{let au=pmap[msg.authorId]||p,realIndex=(r.progress||[]).length-1-idx,canDelete=state.currentUser==='zulhaj';return `<div class="msgitem"><div class="msgmeta"><div class="msgprofile">${avatarHtml(au.id||msg.authorId,'mini')}<span><b>${esc(au.name)}</b><br><span class="micro">${esc(au.role)} · +3 EXP</span></span></div><span>${stamp(msg.createdAt)} ${canDelete?`· <button class="icon" style="display:inline-grid;width:24px;height:24px;border-radius:8px" data-delete-progress="${realIndex}">×</button>`:''}</span></div><div class="msgbody">${esc(msg.text)}</div></div>`}).join('')||'<div class="empty">Belum ada progress update.</div>'}</div></div><div class="card roomcard"><div class="head"><div><h2>Team Message</h2><p class="hint">Semua anggota tim bisa menulis feedback, catatan, atau koordinasi. Tidak menambah EXP.</p></div><span class="pill neutral">${(r.messages||[]).length} Message</span></div><div class="current" style="width:max-content;margin-bottom:10px">${avatarHtml(state.currentUser,'mini')}<span>Menulis sebagai ${c.name}</span></div><textarea id="messageText" placeholder="Tulis message untuk ${p.name}..."></textarea><button class="btn2" id="sendMessageBtn" style="margin-top:10px">Kirim Message</button><div class="msg" style="margin-top:12px">${(r.messages||[]).slice().reverse().map((msg,idx)=>{let au=pmap[msg.authorId]||{name:'Team Member',role:'',initials:'?',cls:'neutral'},realIndex=(r.messages||[]).length-1-idx,canDelete=msg.authorId===state.currentUser||state.currentUser==='zulhaj';return `<div class="msgitem"><div class="msgmeta"><div class="msgprofile">${avatarHtml(au.id||msg.authorId,'mini')}<span><b>${esc(au.name)}</b><br><span class="micro">${esc(au.role)} · Message</span></span></div><span>${stamp(msg.createdAt)} ${canDelete?`· <button class="icon" style="display:inline-grid;width:24px;height:24px;border-radius:8px" data-delete-message="${realIndex}">×</button>`:''}</span></div><div class="msgbody">${esc(msg.text)}</div></div>`}).join('')||'<div class="empty">Belum ada message.</div>'}</div></div><div class="card roomcard"><div class="head"><div><h2>Catat Bantuan</h2><p class="hint">Pemilik ruang bisa mention anggota yang membantu. Anggota yang disebut otomatis mendapat +8 EXP.</p></div><span class="pill ok">+8 EXP</span></div>${isOwner?`<div class="field"><label>Siapa yang membantu?</label><select id="helperSelect">${helperOptions}</select></div><textarea id="helpText" placeholder="Contoh: Dibantu revisi visual, breakdown ide konten, cek data marketplace..." style="margin-top:10px"></textarea><button class="btn" id="saveHelpBtn" style="margin-top:10px">Catat Bantuan +8 EXP</button>`:`<div class="empty">Catatan bantuan hanya bisa dibuat oleh ${p.name}, supaya poin bantuan tetap valid.</div>`}<div class="msg" style="margin-top:12px">${(r.helps||[]).slice().reverse().map((h,idx)=>{let helper=pmap[h.helperId]||{name:'Team Member',role:'',initials:'?',cls:'neutral'},realIndex=(r.helps||[]).length-1-idx,canDelete=state.currentUser==='zulhaj';return `<div class="msgitem"><div class="msgmeta"><div class="msgprofile">${avatarHtml(helper.id||h.helperId,'mini')}<span><b>${esc(helper.name)}</b><br><span class="micro">${esc(helper.role)} · +8 EXP</span></span></div><span>${stamp(h.createdAt)} ${canDelete?`· <button class="icon" style="display:inline-grid;width:24px;height:24px;border-radius:8px" data-delete-help="${realIndex}">×</button>`:''}</span></div><div class="msgbody">${esc(h.text||('Membantu '+p.name))}</div></div>`}).join('')||'<div class="empty">Belum ada bantuan yang dicatat.</div>'}</div></div><div class="card roomcard"><div class="head"><div><h2>Mood / Energy Check-in</h2><p class="hint">Workload dan blocker harian.</p></div></div>${isOwner?`<div class="grid" style="grid-template-columns:1fr 1fr"><div class="field"><label>Mood</label><select id="moodSelect">${moodOptions()}</select></div><div class="field"><label>Workload</label><select id="workloadSelect"><option>Aman</option><option>Padat</option><option>Butuh bantuan</option></select></div></div><textarea id="blockerText" placeholder="Blocker / kendala hari ini..." style="margin-top:10px"></textarea><button class="btn" id="saveMoodBtn" style="margin-top:10px">Save Check-in</button>`:`<div class="empty">Mood check-in hanya bisa diisi oleh ${p.name}.</div>`}<div class="moodlist" style="margin-top:12px">${latestMood?`<div class="mooditem"><span class="pill ${latestMood.workload==='Butuh bantuan'||['angry','sick','sad','tired'].includes(latestMood.mood)?'bad':'info'}">${moodLabel(latestMood.mood)} · ${latestMood.workload}</span><div class="hint">${esc(latestMood.blocker||'Tidak ada blocker')} · ${stamp(latestMood.createdAt)}</div></div>`:'<div class="empty">Belum ada mood check-in.</div>'}</div></div>`}
 function renderMissionBoard(){let s=($('missionSearch').value||'').toLowerCase(),pic=$('missionPicFilter').value,st=$('missionStatusFilter').value;let arr=missions().filter(m=>(m.name+m.detail+m.output+m.note).toLowerCase().includes(s)&&(pic==='all'||m.pic.includes(pic))&&(st==='all'||m.status===st));$('missionList').innerHTML=arr.length?arr.map(m=>{let l=left(m.deadline),cls=over(m)?'over':near(m)?'near':'',status=m.status==='Selesai'?'ok':over(m)?'bad':near(m)?'warn':m.status==='Sedang proses'?'warn':'neutral',speed=m.status==='Selesai'&&m.completedAt?diff(d(m.deadline),d(m.completedAt)):null;return `<div class="card mission ${cls}"><div>${m.pic.map(pill).join(' ')}</div><div><b>#${String(m.id).padStart(2,'0')} · ${m.name}</b><div class="hint">${m.detail}</div>${m.impact?'<div style="margin-top:8px"><span class="pill info">High Impact</span></div>':''}${speed!==null?`<div class="micro" style="margin-top:7px">${speed>0?'Selesai '+speed+' hari lebih cepat':speed===0?'Selesai tepat deadline':'Selesai '+Math.abs(speed)+' hari terlambat'}</div>`:''}${m.note?`<div class="hint" style="color:#ffd0a2;margin-top:8px">Keterangan: ${m.note}</div>`:''}</div><div class="out"><b>Output & EXP</b><br>${m.output}<br><span class="micro">Base selesai +10 · early +10 · on time +5</span></div><div><div class="hint">Deadline</div><b class="${over(m)?'bad':near(m)?'warn':'ok'}" style="background:none;border:0;padding:0">${fmt(m.deadline)}</b><div class="hint">${m.status==='Selesai'?'Selesai '+fmt(m.completedAt):l<0?Math.abs(l)+' hari terlambat':l+' hari tersisa'}</div><button class="pill ${status}" style="margin-top:10px;cursor:pointer" data-open="${m.id}">${m.status}</button></div></div>`}).join(''):`<div class="card empty">Mission Board ${plabel()} masih kosong.</div>`}
-function openMission(id){let m=missions().find(x=>x.id===id); if(!m)return; state.selectedMissionId=id;$('modalTitle').textContent=`Update Mission #${String(id).padStart(2,'0')}`;$('modalStatus').value=m.status;$('modalDeadline').value=m.deadline;$('modalCompletedAt').value=m.completedAt||'';$('modalNote').value=m.note||'';$('missionModal').classList.add('show')} function closeMission(){$('missionModal').classList.remove('show');state.selectedMissionId=null} function saveMission(){let m=missions().find(x=>x.id===state.selectedMissionId);if(!m)return;m.status=$('modalStatus').value;m.deadline=$('modalDeadline').value;m.completedAt=$('modalCompletedAt').value;if(m.status==='Selesai'&&!m.completedAt)m.completedAt=today().toISOString().slice(0,10);if(m.status!=='Selesai')m.completedAt='';m.note=$('modalNote').value.trim();renderAll();closeMission()}
+function openMission(id){
+  let m = missions().find(x => x.id === id);
+  if (!m) return;
+
+  state.selectedMissionId = id;
+
+  $('modalTitle').textContent = `Update Mission #${String(id).padStart(2,'0')}`;
+  $('modalStatus').value = m.status;
+  $('modalDeadline').value = m.deadline;
+  $('modalCompletedAt').value = m.completedAt || '';
+  $('modalNote').value = m.note || '';
+
+  $('missionModal').classList.add('show');
+}
+
+function closeMission(){
+  $('missionModal').classList.remove('show');
+  state.selectedMissionId = null;
+}
+
+async function saveMission(){
+  let m = missions().find(x => x.id === state.selectedMissionId);
+  if (!m) return;
+
+  let newStatus = $('modalStatus').value;
+  let newDeadline = $('modalDeadline').value || null;
+  let newCompletedAt = $('modalCompletedAt').value || null;
+  let newNote = $('modalNote').value.trim();
+
+  if (newStatus === 'Selesai' && !newCompletedAt) {
+    newCompletedAt = today().toISOString().slice(0,10);
+  }
+
+  if (newStatus !== 'Selesai') {
+    newCompletedAt = null;
+  }
+
+  const payload = {
+    status: newStatus,
+    deadline: newDeadline,
+    completed_at: newCompletedAt,
+    note: newNote,
+    updated_at: new Date().toISOString()
+  };
+
+  if (!m.dbId) {
+    alert('Mission ini belum punya dbId. Data kemungkinan belum terbaca dari Supabase.');
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from('missions')
+    .update(payload)
+    .eq('id', m.dbId);
+
+  if (error) {
+    console.error('Save mission error:', error);
+    alert('Gagal menyimpan mission ke Supabase: ' + error.message);
+    return;
+  }
+
+  await loadDashboardDataFromSupabase();
+
+  renderAll();
+  closeMission();
+}
 function openTodoModal(){if(!(state.currentUser===state.activePerson||state.currentUser==='zulhaj'))return;state.todoTarget=state.activePerson;$('todoTitle').value='';$('todoDeadline').value='';$('todoStatus').value='backlog';$('todoPriority').value='medium';$('todoCategory').value='Daily';$('todoRequester').value=personDisplay(state.currentUser).name;$('todoDescription').value='';$('todoModal').classList.add('show')}
 function closeTodoModal(){$('todoModal').classList.remove('show');state.todoTarget=null}
 function saveTodo(){let target=state.todoTarget||state.activePerson;if(!(state.currentUser===target||state.currentUser==='zulhaj'))return;let title=$('todoTitle').value.trim();if(!title)return;updRoom(target,r=>r.todos.push({title,deadline:$('todoDeadline').value,status:$('todoStatus').value,priority:$('todoPriority').value,category:$('todoCategory').value,requester:$('todoRequester').value.trim(),description:$('todoDescription').value.trim(),createdBy:state.currentUser,createdAt:new Date().toISOString()}));closeTodoModal()}
