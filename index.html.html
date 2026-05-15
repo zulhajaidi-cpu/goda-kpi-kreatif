@@ -45,7 +45,7 @@
     <section id="mission" class="view"><div class="card toolbar"><div class="field search"><label>Cari mission / detail / output</label><input id="missionSearch" placeholder="Contoh: kartu garansi, konten, harga online..."></div><div class="field"><label>PIC</label><select id="missionPicFilter"></select></div><div class="field"><label>Status</label><select id="missionStatusFilter"><option value="all">Semua Status</option><option>Selesai</option><option>Sedang proses</option><option>Belum Mulai</option></select></div></div><div class="section"><h2>Mission Board KPI</h2><p class="hint">Task, PIC, output, deadline, status, EXP, dan update progress.</p></div><div class="timeline" id="missionList"></div></section>
   </main>
 
-  <div class="modalbg" id="profileModal"><div class="modal"><div class="modalhead"><h3>Pengaturan Profil</h3><button class="btn2" id="closeProfileModal">×</button></div><div class="modalbody"><p class="hint">Foto profil tersimpan lokal di browser. Password diperbarui melalui akun Supabase yang sedang login.</p><div class="profile-form"><div class="profile-preview" id="profilePreview"></div><div class="field"><label>User Login Baru</label><input id="profileUsername" placeholder="contoh: raihan"></div><div class="field"><label>Password Baru</label><input id="profilePassword" type="password" placeholder="Kosongkan jika tidak ingin mengganti password"></div><div class="field"><label>Foto Profil</label><input id="profilePhoto" type="file" accept="image/*"></div><div id="profileError" style="color:#ffb0b0;font-size:12px;font-weight:850;min-height:18px"></div></div></div><div class="foot"><button class="btn2" id="cancelProfileModal">Batal</button><button class="btn" id="saveProfileBtn">Simpan Profil</button></div></div></div>
+  <div class="modalbg" id="profileModal"><div class="modal"><div class="modalhead"><h3>Pengaturan Profil</h3><button class="btn2" id="closeProfileModal">×</button></div><div class="modalbody"><p class="hint">Foto profil tersimpan di Supabase agar terlihat oleh semua anggota. Password diperbarui melalui akun Supabase yang sedang login.</p><div class="profile-form"><div class="profile-preview" id="profilePreview"></div><div class="field"><label>User Login Baru</label><input id="profileUsername" placeholder="contoh: raihan"></div><div class="field"><label>Password Baru</label><input id="profilePassword" type="password" placeholder="Kosongkan jika tidak ingin mengganti password"></div><div class="field"><label>Foto Profil</label><input id="profilePhoto" type="file" accept="image/*"></div><div id="profileError" style="color:#ffb0b0;font-size:12px;font-weight:850;min-height:18px"></div></div></div><div class="foot"><button class="btn2" id="cancelProfileModal">Batal</button><button class="btn" id="saveProfileBtn">Simpan Profil</button></div></div></div>
 
   <div class="modalbg" id="todoModal"><div class="modal"><div class="modalhead"><h3 id="todoModalTitle">Tambah To Do</h3><button class="btn2" id="closeTodoModal">×</button></div><div class="modalbody"><p class="hint">Isi detail to do agar task harian lebih jelas dan mudah dipantau.</p><div class="modalgrid"><div class="field full"><label>Judul To Do</label><input id="todoTitle" placeholder="Contoh: Finalisasi poster promo Sky"></div><div class="field"><label>Deadline</label><input id="todoDeadline" type="date"></div><div class="field"><label>Status</label><select id="todoStatus"><option value="backlog">Backlog</option><option value="process">Process</option><option value="review">Review</option><option value="done">Done</option><option value="cancel">Cancel</option></select></div><div class="field"><label>Priority</label><select id="todoPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div><div class="field"><label>Category</label><select id="todoCategory"><option>KPI</option><option>Daily</option><option>Others</option><option>Request</option></select></div><div class="field"><label>Requester</label><input id="todoRequester" placeholder="Contoh: Zulhaj / Sales / Dealer"></div><div class="field full"><label>Deskripsi</label><textarea id="todoDescription" placeholder="Detail pekerjaan, kebutuhan file, brief singkat, link referensi, atau catatan khusus..."></textarea></div></div></div><div class="foot"><button class="btn2" id="cancelTodoModal">Batal</button><button class="btn" id="saveTodoBtn">Simpan To Do</button></div></div></div>
 
@@ -92,8 +92,8 @@ function profileStore(){try{return JSON.parse(localStorage.getItem(PROFILE_KEY))
 function saveProfileStore(o){localStorage.setItem(PROFILE_KEY,JSON.stringify(o))}
 function defaultCredential(id){return [id,{password:''}]}
 function profileOf(id){return profileStore()[id]||{}}
-function personDisplay(id){let base=pmap[id]||pmap.zulhaj,pr=profileOf(id),def=defaultCredential(id);return {...base,username:pr.username||def[0]||id,password:'',photo:pr.photo||''}}
-function avatarHtml(id,type='mini'){let p=personDisplay(id),cls=type==='avatar'?'avatar':'miniava';if(p.photo)return `<span class="${cls} ava-photo" style="background-image:url('${p.photo}')">${p.initials}</span>`;return `<span class="${cls} ${p.cls}">${p.initials}</span>`}
+function personDisplay(id){let base=pmap[id]||pmap.zulhaj,pr=profileOf(id),def=defaultCredential(id);return {...base,username:pr.username||def[0]||id,password:'',photo:base.photo||pr.photo||''}}
+function avatarHtml(id,type='mini'){let p=personDisplay(id),cls=type==='avatar'?'avatar':'miniava';if(p.photo)return `<span class="${cls} ava-photo" style="background-image:url('${esc(p.photo)}')">${esc(p.initials)}</span>`;return `<span class="${cls} ${safeCls(p.cls)}">${esc(p.initials)}</span>`}
 function moodOptions(){return [['happy','😊 Happy'],['sad','😢 Sad'],['tired','😩 Tired'],['calm','😌 Calm'],['angry','😠 Angry'],['sleepy','😴 Sleepy'],['confused','😕 Confused'],['sick','🤒 Sick'],['surprised','😮 Surprised'],['chill','😎 Chill'],['flat','😐 Flat'],['silly','🤪 Silly']].map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}
 function moodLabel(v){return {happy:'😊 Happy',sad:'😢 Sad',tired:'😩 Tired',calm:'😌 Calm',angry:'😠 Angry',sleepy:'😴 Sleepy',confused:'😕 Confused',sick:'🤒 Sick',surprised:'😮 Surprised',chill:'😎 Chill',flat:'😐 Flat',silly:'🤪 Silly'}[v]||v}
 function todoStatusLabel(v){return {backlog:'Backlog',process:'Process',review:'Review',done:'Done',cancel:'Cancel'}[v]||v}
@@ -522,7 +522,7 @@ function renderSummary(){let ms=missions(),done=ms.filter(m=>m.status==='Selesai
 function renderRanking(){ $('rankingPeriod').textContent=plabel(); if(!hasData()){$('rankingList').innerHTML=`<div class="empty">Ranking ${plabel()} masih kosong.</div>`;return} let rows=people.filter(p=>p.id!=='zulhaj').map(p=>({p,m:metrics(p.id)})).sort((a,b)=>b.m.score-a.m.score||b.m.done-a.m.done);$('rankingList').innerHTML=rows.map((r,i)=>`<div class="rankrow"><div class="rankno">${i+1}</div><div><div class="name">${esc(r.p.name)}</div><div class="role">${esc(r.p.role)}</div></div><div class="metric"><b>${r.m.score}</b><span>Score</span></div><div class="metric"><b>${r.m.total}</b><span>EXP</span></div><div class="metric"><b>${r.m.done}/${r.m.missions}</b><span>Task</span></div><div class="metric hide-md"><b>${r.m.avg.toFixed(1)}</b><span>Speed</span></div></div>`).join('')}
 function renderAlerts(){let a=missions().filter(m=>near(m)||over(m)).sort((x,y)=>left(x.deadline)-left(y.deadline));$('alertCount').textContent=a.length+' Alert';$('deadlineAlerts').innerHTML=a.length?a.map(m=>{let l=left(m.deadline),cls=l<0?'bad':'warn';return `<div class="alertitem"><div class="head" style="margin:0"><b>#${String(m.id).padStart(2,'0')} · ${esc(m.name)}</b><span class="pill ${cls}">${l<0?Math.abs(l)+' hari terlambat':l+' hari tersisa'}</span></div><div class="hint">PIC: ${m.pic.map(personName).join(', ')} · Deadline: ${fmt(m.deadline)}</div></div>`}).join(''):`<div class="empty">Tidak ada mission kritis untuk ${plabel()}.</div>`}
 function renderQuest(){let ms=missions(),done=ms.filter(m=>m.status==='Selesai').length,overdue=ms.filter(over).length,weekDone=ms.filter(m=>m.status==='Selesai'&&m.completedAt&&diff(today(),d(m.completedAt))<=7&&diff(today(),d(m.completedAt))>=0).length;let qs=[['No Overdue Week','Semua task minggu itu tidak telat',overdue===0&&ms.length>0,`${overdue} overdue`],['100% Mission Clear','Semua mission bulan selesai',ms.length>0&&done===ms.length,`${done}/${ms.length} clear`],['Creative Sprint','10 output selesai dalam 1 minggu',weekDone>=10,`${weekDone}/10 output`]];$('teamQuestList').innerHTML=qs.map(q=>`<div class="quest"><div class="head" style="margin:0"><b>${q[0]}</b><span class="pill ${q[2]?'ok':'neutral'}">${q[2]?'Clear':'Progress'}</span></div><div class="hint">${q[1]} · ${q[3]}</div></div>`).join('')}
-function renderRewards(){let mvp=mvpId(),all=missions().length&&missions().every(m=>m.status==='Selesai');let rewards=[];people.filter(p=>p.id!=='zulhaj').forEach(p=>{let b=badges(p.id,mvp).map(x=>x[0]); if(b.includes('Fast Finisher')||b.includes('Consistency Player'))rewards.push(['Free Coffee',p.name,'Badge Fast Finisher / Consistency Player'])}); if(mvp)rewards.push(['Merchandise Internal',pmap[mvp].name,'MVP of The Month']); if(all)rewards.push(['Makan-makan Bebas Milih','Team','100% Mission Clear']);$('rewardBoard').innerHTML=rewards.length?rewards.map(r=>`<div class="reward"><div class="head" style="margin:0"><b>${r[0]}</b><span class="pill warn">${esc(r[1])}</span></div><div class="hint">${esc(r[2])}</div></div>`).join(''):`<div class="empty">Belum ada reward aktif.</div>`}
+function renderRewards(){let mvp=mvpId(),all=missions().length&&missions().every(m=>m.status==='Selesai'),coffee=[];people.filter(p=>p.id!=='zulhaj').forEach(p=>{let b=badges(p.id,mvp).map(x=>x[0]);if(b.includes('Fast Finisher')||b.includes('Consistency Player'))coffee.push(p.name)});let rows=[['Reward System Free Coffee',coffee.join(', '),'Badge Fast Finisher & Consistency Player'],['Merchandise Internal',mvp?pmap[mvp].name:'','MVP'],['100% Mission Clear',all?'Team':'','Makan - makan bebas milih']];$('rewardBoard').innerHTML=rows.map(r=>`<div class="reward"><div class="head" style="margin:0"><b>${esc(r[0])}</b><span class="pill ${r[1]?'warn':'neutral'}">${r[1]?esc(r[1]):'Belum ada'}</span></div><div class="hint">${esc(r[2])}</div></div>`).join('')}
 function fillFilters(){let opts='<option value="all">Semua</option>'+people.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');$('teamOwnerFilter').innerHTML=opts;$('teamSupportFilter').innerHTML=opts;$('missionPicFilter').innerHTML=opts.replace('Semua','Semua PIC')}
 function renderTeam(){let s=($('teamSearch').value||'').toLowerCase(),o=$('teamOwnerFilter').value,sup=$('teamSupportFilter').value;let rows=teamData().filter(x=>(x.project+x.note).toLowerCase().includes(s)&&(o==='all'||x.owner.includes(o))&&(sup==='all'||x.support.includes(sup)));$('teamTableBody').innerHTML=rows.length?rows.map(x=>`<tr><td><b>${x.no}</b></td><td><b>${esc(x.project)}</b></td><td>${x.owner.map(pill).join(' ')}</td><td>${x.support.length?x.support.map(pill).join(' '):'<span class="pill neutral">-</span>'}</td><td>${esc(x.note)}</td></tr>`).join(''):`<tr><td colspan="5"><div class="empty">KPI Utama Tim ${plabel()} masih kosong.</div></td></tr>`}
 function renderPeople(){ $('peopleGrid').innerHTML=people.map(p=>`<div class="card person ${state.activePerson===p.id?'active':''}" data-person="${p.id}">${avatarHtml(p.id,'avatar')}<div class="name">${esc(p.name)}</div><div class="role">${esc(p.role)}</div></div>`).join('')}
@@ -742,7 +742,45 @@ async function saveTodo(){
 }
 function openProfileModal(){if(!state.currentUser)return;let c=current();$('profileUsername').value=c.username||'';$('profilePassword').value='';$('profilePhoto').value='';$('profilePreview').innerHTML=avatarHtml(state.currentUser,'avatar');$('profileError').textContent='';$('profileModal').classList.add('show')}
 function closeProfileModal(){$('profileModal').classList.remove('show')}
-async function saveProfile(){if(!state.currentUser)return;let id=state.currentUser,username=$('profileUsername').value.trim().toLowerCase(),pass=$('profilePassword').value,file=$('profilePhoto').files[0];if(!username){$('profileError').textContent='User tidak boleh kosong.';return}if(usernameTaken(username,id)){$('profileError').textContent='User sudah dipakai anggota lain.';return}if(pass){let {error}=await supabaseClient.auth.updateUser({password:pass});if(error){$('profileError').textContent='Gagal mengganti password: '+error.message;return}}let store=profileStore(),old=store[id]||{},photo=old.photo||'';if(file)photo=await fileToDataURL(file);store[id]={...old,username,photo};delete store[id].password;saveProfileStore(store);closeProfileModal();renderAll()}
+async function saveProfile(){
+  if(!state.currentUser)return;
+
+  let id=state.currentUser,
+      username=$('profileUsername').value.trim().toLowerCase(),
+      pass=$('profilePassword').value,
+      file=$('profilePhoto').files[0];
+
+  if(!username){$('profileError').textContent='User tidak boleh kosong.';return}
+  if(usernameTaken(username,id)){$('profileError').textContent='User sudah dipakai anggota lain.';return}
+
+  if(pass){
+    let {error}=await supabaseClient.auth.updateUser({password:pass});
+    if(error){$('profileError').textContent='Gagal mengganti password: '+error.message;return}
+  }
+
+  let payload = { username };
+  if(file) payload.avatar_url = await fileToDataURL(file);
+
+  const currentProfile = pmap[id];
+  if(!currentProfile?.dbId){$('profileError').textContent='Profile ID belum lengkap. Coba refresh dashboard setelah login.';return}
+
+  const { error } = await supabaseClient
+    .from('profiles')
+    .update(payload)
+    .eq('id', currentProfile.dbId);
+
+  if(error){$('profileError').textContent='Gagal menyimpan profil: '+error.message;return}
+
+  let store=profileStore(),old=store[id]||{};
+  store[id]={...old,username};
+  delete store[id].password;
+  delete store[id].photo;
+  saveProfileStore(store);
+
+  await loadDashboardDataFromSupabase();
+  closeProfileModal();
+  renderAll();
+}
 function renderAll(){
   renderSummary();
   renderRanking();
