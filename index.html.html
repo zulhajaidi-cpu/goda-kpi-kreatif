@@ -508,7 +508,67 @@ async function saveMission(){
 }
 function openTodoModal(){if(!(state.currentUser===state.activePerson||state.currentUser==='zulhaj'))return;state.todoTarget=state.activePerson;$('todoTitle').value='';$('todoDeadline').value='';$('todoStatus').value='backlog';$('todoPriority').value='medium';$('todoCategory').value='Daily';$('todoRequester').value=personDisplay(state.currentUser).name;$('todoDescription').value='';$('todoModal').classList.add('show')}
 function closeTodoModal(){$('todoModal').classList.remove('show');state.todoTarget=null}
-function saveTodo(){let target=state.todoTarget||state.activePerson;if(!(state.currentUser===target||state.currentUser==='zulhaj'))return;let title=$('todoTitle').value.trim();if(!title)return;updRoom(target,r=>r.todos.push({title,deadline:$('todoDeadline').value,status:$('todoStatus').value,priority:$('todoPriority').value,category:$('todoCategory').value,requester:$('todoRequester').value.trim(),description:$('todoDescription').value.trim(),createdBy:state.currentUser,createdAt:new Date().toISOString()}));closeTodoModal()}
+async function saveTodo(){
+  let target = state.todoTarget || state.activePerson;
+
+  if (!(state.currentUser === target || state.currentUser === 'zulhaj')) return;
+
+  let title = $('todoTitle').value.trim();
+  if (!title) return;
+
+  const currentPeriodCode = period();
+
+  const { data: periodRow, error: periodError } = await supabaseClient
+    .from("periods")
+    .select("id")
+    .eq("code", currentPeriodCode)
+    .single();
+
+  if (periodError) {
+    console.error("Todo period error:", periodError);
+    alert("Gagal membaca periode: " + periodError.message);
+    return;
+  }
+
+  const ownerProfile = pmap[target];
+  const creatorProfile = pmap[state.currentUser];
+
+  if (!ownerProfile?.dbId || !creatorProfile?.dbId) {
+    alert("Profile ID belum lengkap. Coba refresh dashboard setelah login.");
+    return;
+  }
+
+  const payload = {
+    period_id: periodRow.id,
+    owner_id: ownerProfile.dbId,
+    title: title,
+    deadline: $('todoDeadline').value || null,
+    status: $('todoStatus').value,
+    priority: $('todoPriority').value,
+    category: $('todoCategory').value,
+    requester: $('todoRequester').value.trim(),
+    description: $('todoDescription').value.trim(),
+    created_by: creatorProfile.dbId,
+    updated_by: creatorProfile.dbId,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabaseClient
+    .from("todos")
+    .insert(payload);
+
+  if (error) {
+    console.error("Save todo error:", error);
+    alert("Gagal menyimpan To Do: " + error.message);
+    return;
+  }
+
+  await loadDashboardDataFromSupabase();
+
+  closeTodoModal();
+  renderIndividualRoom();
+  renderAllCore();
+}
 function openProfileModal(){if(!state.currentUser)return;let c=current();$('profileUsername').value=c.username||'';$('profilePassword').value='';$('profilePhoto').value='';$('profilePreview').innerHTML=avatarHtml(state.currentUser,'avatar');$('profileError').textContent='';$('profileModal').classList.add('show')}
 function closeProfileModal(){$('profileModal').classList.remove('show')}
 async function saveProfile(){if(!state.currentUser)return;let id=state.currentUser,username=$('profileUsername').value.trim().toLowerCase(),pass=$('profilePassword').value,file=$('profilePhoto').files[0];if(!username){$('profileError').textContent='User tidak boleh kosong.';return}if(usernameTaken(username,id)){$('profileError').textContent='User sudah dipakai anggota lain.';return}let store=profileStore(),old=store[id]||{},def=defaultCredential(id),photo=old.photo||'';if(file)photo=await fileToDataURL(file);store[id]={...old,username,password:pass||old.password||def[1].password,photo};saveProfileStore(store);closeProfileModal();renderAll()}
@@ -531,7 +591,54 @@ function wire(){document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{stat
 
   fillFilters();
   renderAll();
-};['teamSearch','teamOwnerFilter','teamSupportFilter'].forEach(id=>{$(id).oninput=renderTeam;$(id).onchange=renderTeam});['missionSearch','missionPicFilter','missionStatusFilter'].forEach(id=>{$(id).oninput=renderMissionBoard;$(id).onchange=renderMissionBoard});$('peopleGrid').onclick=e=>{let c=e.target.closest('[data-person]');if(c){state.activePerson=c.dataset.person;renderPeople();renderProfile();renderIndividualRoom()}};$('missionList').onclick=e=>{let b=e.target.closest('[data-open]');if(b)openMission(Number(b.dataset.open))};$('closeModal').onclick=closeMission;$('cancelModal').onclick=closeMission;$('saveMission').onclick=saveMission;$('missionModal').onclick=e=>{if(e.target.id==='missionModal')closeMission()};$('individualRoom').onclick=e=>{if(e.target.id==='addTodoBtn'){openTodoModal();return}let t=e.target.closest('[data-toggle-todo]');if(t){if(!(state.currentUser===state.activePerson||state.currentUser==='zulhaj'))return;let i=+t.dataset.toggleTodo;updRoom(state.activePerson,r=>{if(r.todos[i]){r.todos[i].status=t.checked?'done':'process';r.todos[i].done=t.checked}});return}let del=e.target.closest('[data-delete-todo]');if(del){if(!(state.currentUser===state.activePerson||state.currentUser==='zulhaj'))return;let i=+del.dataset.deleteTodo;updRoom(state.activePerson,r=>r.todos.splice(i,1));return}if(e.target.id==='sendProgressBtn'){if(state.currentUser!==state.activePerson)return;let text=$('progressText').value.trim();if(!text)return;updRoom(state.activePerson,r=>r.progress.push({authorId:state.currentUser,text,createdAt:new Date().toISOString()}));return}if(e.target.id==='sendMessageBtn'){let text=$('messageText').value.trim();if(!text||!state.currentUser)return;updRoom(state.activePerson,r=>r.messages.push({authorId:state.currentUser,text,createdAt:new Date().toISOString()}));return}let delMsg=e.target.closest('[data-delete-message]');if(delMsg){let i=+delMsg.dataset.deleteMessage;updRoom(state.activePerson,r=>{let msg=r.messages[i];if(msg&&(msg.authorId===state.currentUser||state.currentUser==='zulhaj'))r.messages.splice(i,1)});return}let delProgress=e.target.closest('[data-delete-progress]');if(delProgress){if(state.currentUser!=='zulhaj')return;let i=+delProgress.dataset.deleteProgress;updRoom(state.activePerson,r=>{if(r.progress[i])r.progress.splice(i,1)});return}let delHelp=e.target.closest('[data-delete-help]');if(delHelp){if(state.currentUser!=='zulhaj')return;let i=+delHelp.dataset.deleteHelp;updRoom(state.activePerson,r=>{if(r.helps[i])r.helps.splice(i,1)});return}if(e.target.id==='saveHelpBtn'){if(state.currentUser!==state.activePerson)return;let helperId=$('helperSelect').value,text=$('helpText').value.trim();if(!helperId)return;updRoom(state.activePerson,r=>r.helps.push({helperId,text:text||`Membantu ${pmap[state.activePerson].name}`,createdAt:new Date().toISOString()}));return}if(e.target.id==='saveMoodBtn'){if(state.currentUser!==state.activePerson)return;updRoom(state.activePerson,r=>r.mood.push({authorId:state.currentUser,mood:$('moodSelect').value,workload:$('workloadSelect').value,blocker:$('blockerText').value.trim(),createdAt:new Date().toISOString()}));return}};$('individualRoom').onkeydown=e=>{if(e.target.id==='todoTitle'&&e.key==='Enter'&&$('saveTodoBtn')){$('saveTodoBtn').click()}}}
+};['teamSearch','teamOwnerFilter','teamSupportFilter'].forEach(id=>{$(id).oninput=renderTeam;$(id).onchange=renderTeam});['missionSearch','missionPicFilter','missionStatusFilter'].forEach(id=>{$(id).oninput=renderMissionBoard;$(id).onchange=renderMissionBoard});$('peopleGrid').onclick=e=>{let c=e.target.closest('[data-person]');if(c){state.activePerson=c.dataset.person;renderPeople();renderProfile();renderIndividualRoom()}};$('missionList').onclick=e=>{let b=e.target.closest('[data-open]');if(b)openMission(Number(b.dataset.open))};$('closeModal').onclick=closeMission;$('cancelModal').onclick=closeMission;$('saveMission').onclick=saveMission;$('missionModal').onclick=e=>{if(e.target.id==='missionModal')closeMission()};$('individualRoom').onclick=async e=>{if(e.target.id==='addTodoBtn'){openTodoModal();return}let t=e.target.closest('[data-toggle-todo]');
+if(t){
+  if(!(state.currentUser===state.activePerson||state.currentUser==='zulhaj'))return;
+
+  let todoId = t.dataset.toggleTodo;
+  const currentProfile = pmap[state.currentUser];
+
+  const { error } = await supabaseClient
+    .from("todos")
+    .update({
+      status: t.checked ? "done" : "process",
+      updated_by: currentProfile?.dbId || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", todoId);
+
+  if (error) {
+    console.error("Toggle todo error:", error);
+    alert("Gagal update To Do: " + error.message);
+    return;
+  }
+
+  await loadDashboardDataFromSupabase();
+  renderIndividualRoom();
+  renderAllCore();
+  return;
+}let del=e.target.closest('[data-delete-todo]');
+if(del){
+  if(!(state.currentUser===state.activePerson||state.currentUser==='zulhaj'))return;
+
+  let todoId = del.dataset.deleteTodo;
+
+  const { error } = await supabaseClient
+    .from("todos")
+    .delete()
+    .eq("id", todoId);
+
+  if (error) {
+    console.error("Delete todo error:", error);
+    alert("Gagal hapus To Do: " + error.message);
+    return;
+  }
+
+  await loadDashboardDataFromSupabase();
+  renderIndividualRoom();
+  renderAllCore();
+  return;
+}if(e.target.id==='sendProgressBtn'){if(state.currentUser!==state.activePerson)return;let text=$('progressText').value.trim();if(!text)return;updRoom(state.activePerson,r=>r.progress.push({authorId:state.currentUser,text,createdAt:new Date().toISOString()}));return}if(e.target.id==='sendMessageBtn'){let text=$('messageText').value.trim();if(!text||!state.currentUser)return;updRoom(state.activePerson,r=>r.messages.push({authorId:state.currentUser,text,createdAt:new Date().toISOString()}));return}let delMsg=e.target.closest('[data-delete-message]');if(delMsg){let i=+delMsg.dataset.deleteMessage;updRoom(state.activePerson,r=>{let msg=r.messages[i];if(msg&&(msg.authorId===state.currentUser||state.currentUser==='zulhaj'))r.messages.splice(i,1)});return}let delProgress=e.target.closest('[data-delete-progress]');if(delProgress){if(state.currentUser!=='zulhaj')return;let i=+delProgress.dataset.deleteProgress;updRoom(state.activePerson,r=>{if(r.progress[i])r.progress.splice(i,1)});return}let delHelp=e.target.closest('[data-delete-help]');if(delHelp){if(state.currentUser!=='zulhaj')return;let i=+delHelp.dataset.deleteHelp;updRoom(state.activePerson,r=>{if(r.helps[i])r.helps.splice(i,1)});return}if(e.target.id==='saveHelpBtn'){if(state.currentUser!==state.activePerson)return;let helperId=$('helperSelect').value,text=$('helpText').value.trim();if(!helperId)return;updRoom(state.activePerson,r=>r.helps.push({helperId,text:text||`Membantu ${pmap[state.activePerson].name}`,createdAt:new Date().toISOString()}));return}if(e.target.id==='saveMoodBtn'){if(state.currentUser!==state.activePerson)return;updRoom(state.activePerson,r=>r.mood.push({authorId:state.currentUser,mood:$('moodSelect').value,workload:$('workloadSelect').value,blocker:$('blockerText').value.trim(),createdAt:new Date().toISOString()}));return}};$('individualRoom').onkeydown=e=>{if(e.target.id==='todoTitle'&&e.key==='Enter'&&$('saveTodoBtn')){$('saveTodoBtn').click()}}}
 async function init() {
   fillFilters();
   wire();
