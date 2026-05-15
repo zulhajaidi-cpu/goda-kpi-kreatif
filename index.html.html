@@ -738,7 +738,55 @@ if(editTodo && !e.target.closest('input') && !e.target.closest('button')){
 
   openTodoModal(editTodo.dataset.editTodo);
   return;
-}if(e.target.id==='sendProgressBtn'){if(state.currentUser!==state.activePerson)return;let text=$('progressText').value.trim();if(!text)return;updRoom(state.activePerson,r=>r.progress.push({authorId:state.currentUser,text,createdAt:new Date().toISOString()}));return}if(e.target.id==='sendMessageBtn'){let text=$('messageText').value.trim();if(!text||!state.currentUser)return;updRoom(state.activePerson,r=>r.messages.push({authorId:state.currentUser,text,createdAt:new Date().toISOString()}));return}let delMsg=e.target.closest('[data-delete-message]');if(delMsg){let i=+delMsg.dataset.deleteMessage;updRoom(state.activePerson,r=>{let msg=r.messages[i];if(msg&&(msg.authorId===state.currentUser||state.currentUser==='zulhaj'))r.messages.splice(i,1)});return}let delProgress=e.target.closest('[data-delete-progress]');if(delProgress){if(state.currentUser!=='zulhaj')return;let i=+delProgress.dataset.deleteProgress;updRoom(state.activePerson,r=>{if(r.progress[i])r.progress.splice(i,1)});return}let delHelp=e.target.closest('[data-delete-help]');if(delHelp){if(state.currentUser!=='zulhaj')return;let i=+delHelp.dataset.deleteHelp;updRoom(state.activePerson,r=>{if(r.helps[i])r.helps.splice(i,1)});return}if(e.target.id==='saveHelpBtn'){if(state.currentUser!==state.activePerson)return;let helperId=$('helperSelect').value,text=$('helpText').value.trim();if(!helperId)return;updRoom(state.activePerson,r=>r.helps.push({helperId,text:text||`Membantu ${pmap[state.activePerson].name}`,createdAt:new Date().toISOString()}));return}if(e.target.id==='saveMoodBtn'){if(state.currentUser!==state.activePerson)return;updRoom(state.activePerson,r=>r.mood.push({authorId:state.currentUser,mood:$('moodSelect').value,workload:$('workloadSelect').value,blocker:$('blockerText').value.trim(),createdAt:new Date().toISOString()}));return}};$('individualRoom').onkeydown=e=>{if(e.target.id==='todoTitle'&&e.key==='Enter'&&$('saveTodoBtn')){$('saveTodoBtn').click()}}}
+}if(e.target.id==='sendProgressBtn'){
+  if(state.currentUser !== state.activePerson) return;
+
+  let text = $('progressText').value.trim();
+  if(!text) return;
+
+  const currentPeriodCode = period();
+
+  const { data: periodRow, error: periodError } = await supabaseClient
+    .from("periods")
+    .select("id")
+    .eq("code", currentPeriodCode)
+    .single();
+
+  if (periodError) {
+    console.error("Progress period error:", periodError);
+    alert("Gagal membaca periode: " + periodError.message);
+    return;
+  }
+
+  const ownerProfile = pmap[state.activePerson];
+  const creatorProfile = pmap[state.currentUser];
+
+  if (!ownerProfile?.dbId || !creatorProfile?.dbId) {
+    alert("Profile ID belum lengkap. Coba refresh dashboard setelah login.");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("progress_updates")
+    .insert({
+      period_id: periodRow.id,
+      owner_id: ownerProfile.dbId,
+      text,
+      created_by: creatorProfile.dbId
+    });
+
+  if (error) {
+    console.error("Save progress error:", error);
+    alert("Gagal menyimpan Progress Update: " + error.message);
+    return;
+  }
+
+  await loadDashboardDataFromSupabase();
+
+  renderIndividualRoom();
+  renderAllCore();
+  return;
+}};$('individualRoom').onclick=async e=>{if(e.target.id==='todoTitle'&&e.key==='Enter'&&$('saveTodoBtn')){$('saveTodoBtn').click()}}}
 async function init() {
   fillFilters();
   wire();
