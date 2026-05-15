@@ -786,7 +786,39 @@ if(editTodo && !e.target.closest('input') && !e.target.closest('button')){
   renderIndividualRoom();
   renderAllCore();
   return;
-}};$('individualRoom').onclick=async e=>{if(e.target.id==='todoTitle'&&e.key==='Enter'&&$('saveTodoBtn')){$('saveTodoBtn').click()}}}
+}
+
+let delProgress = e.target.closest('[data-delete-progress]');
+if(delProgress){
+  if(state.currentUser !== 'zulhaj') return;
+
+  let progressId = delProgress.dataset.deleteProgress;
+
+  const { error } = await supabaseClient
+    .from("progress_updates")
+    .delete()
+    .eq("id", progressId);
+
+  if (error) {
+    console.error("Delete progress error:", error);
+    alert("Gagal hapus Progress Update: " + error.message);
+    return;
+  }
+
+  await loadDashboardDataFromSupabase();
+
+  renderIndividualRoom();
+  renderAllCore();
+  return;
+}
+
+};
+
+$('individualRoom').onkeydown = e => {
+  if(e.target.id === 'todoTitle' && e.key === 'Enter' && $('saveTodoBtn')){
+    $('saveTodoBtn').click();
+  }
+};
 async function init() {
   fillFilters();
   wire();
