@@ -91,8 +91,85 @@ function expOf(id){let ms=missions().filter(m=>m.pic.includes(id)),r=room(id),do
 function badges(id,mvpId){let x=expOf(id),r=room(id),days=[...new Set((r.progress||[]).map(p=>p.createdAt.slice(0,10)))],arr=[]; if(x.before>=5)arr.push(['Fast Finisher','5 task selesai sebelum deadline','ok','⚡']); if(x.overdue===0&&x.missions>0)arr.push(['No Overdue Week','Tidak ada task terlambat aktif','ok','🛡️']); if(x.helps>=3)arr.push(['Team Supporter','Membantu minimal 3 task anggota lain','info','🤝']); if(days.length>=5)arr.push(['Consistency Player','Update progress 5 hari berbeda','warn','🔥']); if(x.impact>=1)arr.push(['High Impact Player','Task high impact selesai','info','⭐']); if(x.done>=8&&x.overdue<=1)arr.push(['Silent Killer','Banyak task selesai tanpa drama','neutral','🥷']); if(id===mvpId)arr.push(['MVP of The Month','Performance tertinggi bulan ini','warn','👑']); return arr}
 function metrics(id){let x=expOf(id),rate=x.missions?x.done/x.missions:0,avg=0,done=missions().filter(m=>m.pic.includes(id)&&m.status==='Selesai'); if(done.length)avg=done.map(m=>diff(d(m.deadline),d(m.completedAt||m.deadline))).reduce((a,b)=>a+b,0)/done.length;return {...x,rate,avg,score:Math.max(0,Math.round(x.total+rate*40+Math.max(0,avg)*3))}}
 function mvpId(){if(!hasData())return null;return people.filter(p=>p.id!=='zulhaj').map(p=>({id:p.id,m:metrics(p.id)})).sort((a,b)=>b.m.score-a.m.score||b.m.done-a.m.done)[0]?.id}
-function renderAuth(){state.currentUser=sessionStorage.getItem('godaKpiUser')||state.currentUser; let c=current(); if(!state.currentUser){$('loginScreen').classList.add('show'); $('currentUserBadge').innerHTML='<span>Belum login</span>';return} $('loginScreen').classList.remove('show'); $('currentUserBadge').innerHTML=`${avatarHtml(state.currentUser,'mini')}<span>${c.name}</span>`}
-function login(){let u=$('loginUser').value.trim().toLowerCase(),pw=$('loginPassword').value,a=resolveLogin(u,pw); if(!a){$('loginError').textContent='User atau password salah.';return} state.currentUser=a.personId; sessionStorage.setItem('godaKpiUser',a.personId); $('loginError').textContent=''; $('loginPassword').value=''; renderAuth(); renderAll()} function logout(){sessionStorage.removeItem('godaKpiUser');state.currentUser=null;$('loginUser').value='';$('loginPassword').value='';renderAuth()}
+async function loadAuthProfile() {
+  const { data: sessionData } = await supabaseClient.auth.getSession();
+  authUser = sessionData?.session?.user || null;
+
+  if (!authUser) {
+    authProfile = null;
+    state.currentUser = null;
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("id", authUser.id)
+    .single();
+
+  if (error) {
+    console.error("Profile load error:", error);
+    authProfile = null;
+    state.currentUser = null;
+    return;
+  }
+
+  authProfile = data;
+  state.currentUser = data.username;
+}
+
+async function renderAuth() {
+  await loadAuthProfile();
+
+  if (!authUser || !authProfile) {
+    $("loginScreen").classList.add("show");
+    $("currentUserBadge").innerHTML = "<span>Belum login</span>";
+    return;
+  }
+
+  $("loginScreen").classList.remove("show");
+
+  $("currentUserBadge").innerHTML = `
+    <span class="miniava ${authProfile.color_class || "neutral"}">${authProfile.initials || "?"}</span>
+    <span>${esc(authProfile.full_name)}</span>
+  `;
+}
+
+async function login() {
+  const email = $("loginUser").value.trim().toLowerCase();
+  const password = $("loginPassword").value;
+
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    console.error("Login error:", error);
+    $("loginError").textContent = "Email atau password salah.";
+    return;
+  }
+
+  authUser = data.user;
+  $("loginError").textContent = "";
+  $("loginPassword").value = "";
+
+  await renderAuth();
+  renderAll();
+}
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+
+  authUser = null;
+  authProfile = null;
+  state.currentUser = null;
+
+  $("loginUser").value = "";
+  $("loginPassword").value = "";
+
+  await renderAuth();
+}
 function renderAllCore(){renderSummary();renderRanking();renderAlerts();renderQuest();renderRewards();renderProfile();renderMissionBoard()}
 function renderSummary(){let ms=missions(),done=ms.filter(m=>m.status==='Selesai').length,prog=ms.length?Math.round(done/ms.length*100):0,alerts=ms.filter(m=>near(m)||over(m)).length;let cards=[['Periode',plabel().split(' ')[0],hasData()?'Data KPI tersedia':'Belum ada data'],['Team Project',teamData().length,'KPI utama periode aktif'],['Mission Progress',prog+'%',`${done}/${ms.length} mission selesai`],['Deadline Alert',alerts,'Sisa 3 hari/overdue'],['Team EXP',people.filter(p=>p.id!=='zulhaj').reduce((s,p)=>s+expOf(p.id).total,0),'Akumulasi tim non-leader']];$('summaryGrid').innerHTML=cards.map(c=>`<div class="card stat"><small>${c[0]}</small><b>${c[1]}</b><span>${c[2]}</span></div>`).join('')}
 function renderRanking(){ $('rankingPeriod').textContent=plabel(); if(!hasData()){$('rankingList').innerHTML=`<div class="empty">Ranking ${plabel()} masih kosong.</div>`;return} let rows=people.filter(p=>p.id!=='zulhaj').map(p=>({p,m:metrics(p.id)})).sort((a,b)=>b.m.score-a.m.score||b.m.done-a.m.done);$('rankingList').innerHTML=rows.map((r,i)=>`<div class="rankrow"><div class="rankno">${i+1}</div><div><div class="name">${r.p.name}</div><div class="role">${r.p.role}</div></div><div class="metric"><b>${r.m.score}</b><span>Score</span></div><div class="metric"><b>${r.m.total}</b><span>EXP</span></div><div class="metric"><b>${r.m.done}/${r.m.missions}</b><span>Task</span></div><div class="metric hide-md"><b>${r.m.avg.toFixed(1)}</b><span>Speed</span></div></div>`).join('')}
