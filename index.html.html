@@ -94,6 +94,181 @@ function expOf(id){let ms=missions().filter(m=>m.pic.includes(id)),r=room(id),do
 function badges(id,mvpId){let x=expOf(id),r=room(id),days=[...new Set((r.progress||[]).map(p=>p.createdAt.slice(0,10)))],arr=[]; if(x.before>=5)arr.push(['Fast Finisher','5 task selesai sebelum deadline','ok','⚡']); if(x.overdue===0&&x.missions>0)arr.push(['No Overdue Week','Tidak ada task terlambat aktif','ok','🛡️']); if(x.helps>=3)arr.push(['Team Supporter','Membantu minimal 3 task anggota lain','info','🤝']); if(days.length>=5)arr.push(['Consistency Player','Update progress 5 hari berbeda','warn','🔥']); if(x.impact>=1)arr.push(['High Impact Player','Task high impact selesai','info','⭐']); if(x.done>=8&&x.overdue<=1)arr.push(['Silent Killer','Banyak task selesai tanpa drama','neutral','🥷']); if(id===mvpId)arr.push(['MVP of The Month','Performance tertinggi bulan ini','warn','👑']); return arr}
 function metrics(id){let x=expOf(id),rate=x.missions?x.done/x.missions:0,avg=0,done=missions().filter(m=>m.pic.includes(id)&&m.status==='Selesai'); if(done.length)avg=done.map(m=>diff(d(m.deadline),d(m.completedAt||m.deadline))).reduce((a,b)=>a+b,0)/done.length;return {...x,rate,avg,score:Math.max(0,Math.round(x.total+rate*40+Math.max(0,avg)*3))}}
 function mvpId(){if(!hasData())return null;return people.filter(p=>p.id!=='zulhaj').map(p=>({id:p.id,m:metrics(p.id)})).sort((a,b)=>b.m.score-a.m.score||b.m.done-a.m.done)[0]?.id}
+
+  async function loadDashboardDataFromSupabase() {
+  if (!authUser || !authProfile) return;
+
+  const currentPeriodCode = period();
+
+  const { data: periodRow, error: periodError } = await supabaseClient
+    .from("periods")
+    .select("id, code, label, status")
+    .eq("code", currentPeriodCode)
+    .single();
+
+  if (periodError) {
+    console.error("Period load error:", periodError);
+    return;
+  }
+
+  const periodId = periodRow.id;
+
+  const profileOrder = {
+    zulhaj: 1,
+    roro: 2,
+    septian: 3,
+    raihan: 4,
+    awan: 5,
+    nanda: 6,
+    siswanto: 7
+  };
+
+  const { data: profileRows, error: profileError } = await supabaseClient
+    .from("profiles")
+    .select("id, username, full_name, role_title, initials, color_class, avatar_url, role_type")
+    .eq("is_active", true);
+
+  if (profileError) {
+    console.error("Profiles load error:", profileError);
+    return;
+  }
+
+  people = (profileRows || [])
+    .sort((a, b) => (profileOrder[a.username] || 99) - (profileOrder[b.username] || 99))
+    .map(p => ({
+      id: p.username,
+      dbId: p.id,
+      name: p.full_name,
+      role: p.role_title,
+      initials: p.initials || "?",
+      cls: p.color_class || "neutral",
+      photo: p.avatar_url || "",
+      roleType: p.role_type
+    }));
+
+  pmap = Object.fromEntries(people.map(p => [p.id, p]));
+
+  const { data: teamRows, error: teamError } = await supabaseClient
+    .from("team_kpis")
+    .select("id, no, project, note")
+    .eq("period_id", periodId)
+    .order("no", { ascending: true });
+
+  if (teamError) {
+    console.error("Team KPI load error:", teamError);
+    return;
+  }
+
+  const teamIds = (teamRows || []).map(x => x.id);
+
+  let teamPeopleRows = [];
+  if (teamIds.length) {
+    const { data, error } = await supabaseClient
+      .from("team_kpi_people")
+      .select("team_kpi_id, assignment_type, profiles(username)")
+      .in("team_kpi_id", teamIds);
+
+    if (error) {
+      console.error("Team KPI people load error:", error);
+      return;
+    }
+
+    teamPeopleRows = data || [];
+  }
+
+  teamKpi = (teamRows || []).map(t => {
+    const assignments = teamPeopleRows.filter(x => x.team_kpi_id === t.id);
+    return {
+      no: t.no,
+      dbId: t.id,
+      project: t.project,
+      note: t.note || "",
+      owner: assignments
+        .filter(x => x.assignment_type === "owner")
+        .map(x => x.profiles?.username)
+        .filter(Boolean),
+      support: assignments
+        .filter(x => x.assignment_type === "support")
+        .map(x => x.profiles?.username)
+        .filter(Boolean)
+    };
+  });
+
+  const { data: individualRows, error: individualError } = await supabaseClient
+    .from("individual_kpis")
+    .select("id, no, objective, kpi, weight, profiles(username)")
+    .eq("period_id", periodId)
+    .order("no", { ascending: true });
+
+  if (individualError) {
+    console.error("Individual KPI load error:", individualError);
+    return;
+  }
+
+  individualKpi = {};
+  (individualRows || []).forEach(row => {
+    const username = row.profiles?.username;
+    if (!username) return;
+    if (!individualKpi[username]) individualKpi[username] = [];
+    individualKpi[username].push([
+      row.objective,
+      row.kpi,
+      row.weight
+    ]);
+  });
+
+  const { data: missionRows, error: missionError } = await supabaseClient
+    .from("missions")
+    .select("id, no, name, detail, output, deadline, status, completed_at, note, is_high_impact")
+    .eq("period_id", periodId)
+    .order("no", { ascending: true });
+
+  if (missionError) {
+    console.error("Missions load error:", missionError);
+    return;
+  }
+
+  const missionIds = (missionRows || []).map(x => x.id);
+
+  let missionPeopleRows = [];
+  if (missionIds.length) {
+    const { data, error } = await supabaseClient
+      .from("mission_people")
+      .select("mission_id, profiles(username)")
+      .in("mission_id", missionIds);
+
+    if (error) {
+      console.error("Mission people load error:", error);
+      return;
+    }
+
+    missionPeopleRows = data || [];
+  }
+
+  missionBoard = (missionRows || []).map(m => ({
+    id: m.no,
+    dbId: m.id,
+    pic: missionPeopleRows
+      .filter(x => x.mission_id === m.id)
+      .map(x => x.profiles?.username)
+      .filter(Boolean),
+    name: m.name,
+    detail: m.detail || "",
+    deadline: m.deadline || "",
+    completedAt: m.completed_at || "",
+    output: m.output || "",
+    status: m.status || "Belum Mulai",
+    note: m.note || "",
+    impact: !!m.is_high_impact
+  }));
+
+  console.log("Supabase KPI data loaded:", {
+    people,
+    teamKpi,
+    individualKpi,
+    missionBoard
+  });
+}
 async function loadAuthProfile() {
   const { data: sessionData } = await supabaseClient.auth.getSession();
   authUser = sessionData?.session?.user || null;
