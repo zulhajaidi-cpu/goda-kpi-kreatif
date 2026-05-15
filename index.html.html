@@ -47,7 +47,7 @@
 
   <div class="modalbg" id="profileModal"><div class="modal"><div class="modalhead"><h3>Pengaturan Profil</h3><button class="btn2" id="closeProfileModal">×</button></div><div class="modalbody"><p class="hint">Setiap anggota dapat mengganti foto profil, user login, dan password. Perubahan tersimpan lokal di browser.</p><div class="profile-form"><div class="profile-preview" id="profilePreview"></div><div class="field"><label>User Login Baru</label><input id="profileUsername" placeholder="contoh: raihan"></div><div class="field"><label>Password Baru</label><input id="profilePassword" type="password" placeholder="Kosongkan jika tidak ingin mengganti password"></div><div class="field"><label>Foto Profil</label><input id="profilePhoto" type="file" accept="image/*"></div><div id="profileError" style="color:#ffb0b0;font-size:12px;font-weight:850;min-height:18px"></div></div></div><div class="foot"><button class="btn2" id="cancelProfileModal">Batal</button><button class="btn" id="saveProfileBtn">Simpan Profil</button></div></div></div>
 
-  <div class="modalbg" id="todoModal"><div class="modal"><div class="modalhead"><h3>Tambah To Do</h3><button class="btn2" id="closeTodoModal">×</button></div><div class="modalbody"><p class="hint">Isi detail to do agar task harian lebih jelas dan mudah dipantau.</p><div class="modalgrid"><div class="field full"><label>Judul To Do</label><input id="todoTitle" placeholder="Contoh: Finalisasi poster promo Sky"></div><div class="field"><label>Deadline</label><input id="todoDeadline" type="date"></div><div class="field"><label>Status</label><select id="todoStatus"><option value="backlog">Backlog</option><option value="process">Process</option><option value="review">Review</option><option value="done">Done</option><option value="cancel">Cancel</option></select></div><div class="field"><label>Priority</label><select id="todoPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div><div class="field"><label>Category</label><select id="todoCategory"><option>KPI</option><option>Daily</option><option>Others</option><option>Request</option></select></div><div class="field"><label>Requester</label><input id="todoRequester" placeholder="Contoh: Zulhaj / Sales / Dealer"></div><div class="field full"><label>Deskripsi</label><textarea id="todoDescription" placeholder="Detail pekerjaan, kebutuhan file, brief singkat, link referensi, atau catatan khusus..."></textarea></div></div></div><div class="foot"><button class="btn2" id="cancelTodoModal">Batal</button><button class="btn" id="saveTodoBtn">Simpan To Do</button></div></div></div>
+  <div class="modalbg" id="todoModal"><div class="modal"><div class="modalhead"><h3 id="todoModalTitle">Tambah To Do</h3><button class="btn2" id="closeTodoModal">×</button></div><div class="modalbody"><p class="hint">Isi detail to do agar task harian lebih jelas dan mudah dipantau.</p><div class="modalgrid"><div class="field full"><label>Judul To Do</label><input id="todoTitle" placeholder="Contoh: Finalisasi poster promo Sky"></div><div class="field"><label>Deadline</label><input id="todoDeadline" type="date"></div><div class="field"><label>Status</label><select id="todoStatus"><option value="backlog">Backlog</option><option value="process">Process</option><option value="review">Review</option><option value="done">Done</option><option value="cancel">Cancel</option></select></div><div class="field"><label>Priority</label><select id="todoPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div><div class="field"><label>Category</label><select id="todoCategory"><option>KPI</option><option>Daily</option><option>Others</option><option>Request</option></select></div><div class="field"><label>Requester</label><input id="todoRequester" placeholder="Contoh: Zulhaj / Sales / Dealer"></div><div class="field full"><label>Deskripsi</label><textarea id="todoDescription" placeholder="Detail pekerjaan, kebutuhan file, brief singkat, link referensi, atau catatan khusus..."></textarea></div></div></div><div class="foot"><button class="btn2" id="cancelTodoModal">Batal</button><button class="btn" id="saveTodoBtn">Simpan To Do</button></div></div></div>
 
   <div class="modalbg" id="missionModal"><div class="modal"><div class="modalhead"><h3 id="modalTitle">Update Mission</h3><button class="btn2" id="closeModal">×</button></div><div class="modalbody"><p class="hint">Update status dan tanggal selesai. EXP dihitung otomatis dari data ini.</p><div class="modalgrid"><div class="field"><label>Status</label><select id="modalStatus"><option>Selesai</option><option>Sedang proses</option><option>Belum Mulai</option></select></div><div class="field"><label>Deadline</label><input id="modalDeadline" type="date"></div><div class="field"><label>Tanggal Selesai</label><input id="modalCompletedAt" type="date"></div><div class="field full"><label>Keterangan</label><textarea id="modalNote" placeholder="Progress, kendala, next action..."></textarea></div></div></div><div class="foot"><button class="btn2" id="cancelModal">Batal</button><button class="btn" id="saveMission">Simpan Update</button></div></div></div>
 
@@ -71,7 +71,14 @@ let individualKpi={zulhaj:[['Memimpin monitoring KPI tim marketing creative','Se
 let missionBoard=[
 [1,['roro','septian'],'Produksi 20 content marketing','Menyusun content plan Mei, menentukan tema, angle, objective, dan prioritas konten FYP.','2026-05-11','2026-05-10','Content plan Mei final dan siap produksi.','Selesai','Link content plan tersedia.',1],[2,['roro','septian'],'Produksi 20 content marketing','Produksi batch 1 konten marketing untuk kebutuhan minggu 1–2.','2026-05-12','2026-05-12','Minimal 7 konten selesai.','Selesai','Folder drive produksi tersedia.',0],[3,['roro','septian'],'Produksi 20 content marketing','Produksi batch 2 konten marketing untuk kebutuhan minggu 2–3.','2026-05-18','','Minimal 14 konten selesai.','Sedang proses','',0],[4,['roro','septian'],'Produksi 20 content marketing','Finalisasi seluruh target 20 konten dan evaluasi performa konten utama.','2026-05-31','','20 konten selesai, ada evaluasi performa bulanan.','Belum Mulai','',1],[5,['roro','septian'],'Produksi 20 content marketing','Menyiapkan 2–3 konten berpotensi FYP dengan hook, format, dan visual kuat.','2026-05-25','','Konten unggulan siap tayang untuk target 500k views.','Sedang proses','Draft konten unggulan dipantau.',1],[6,['septian','roro'],'Godasentara Episode 2','Menentukan shortlist lokasi final: Bromo / Karimun Jawa.','2026-05-08','2026-05-08','1 opsi lokasi final terpilih.','Selesai','Shortlist lokasi sudah dipilih.',0],[7,['septian','roro'],'Godasentara Episode 2','Menyusun konsep utama, narasi, angle visual, dan referensi kreatif.','2026-05-13','2026-05-13','Final concept Godasentara Episode 2 selesai.','Selesai','Link draft konsep tersedia.',1],[8,['septian','roro'],'Godasentara Episode 2','Menyusun rundown, shot list, alat, talent, dan teknis.','2026-05-20','','Dokumen pra-produksi lengkap.','Belum Mulai','',0],[9,['septian','roro'],'Godasentara Episode 2','Finalisasi kesiapan pra-produksi dan opsi eksekusi akhir bulan.','2026-05-28','','Project siap masuk tahap eksekusi.','Belum Mulai','',1],[10,['nanda','siswanto'],'Target marketplace','Review target marketplace, breakdown target unit, merchandise, dan channel.','2026-05-07','2026-05-07','Breakdown target final.','Selesai','',1],[11,['nanda','siswanto'],'Target marketplace','Optimasi listing, promo, iklan, bundling, dan strategi penjualan.','2026-05-12','2026-05-12','Strategi penjualan aktif berjalan.','Selesai','',0],[12,['nanda','siswanto'],'Target marketplace','Monitoring penjualan minggu 1–2 dan evaluasi gap target.','2026-05-16','','Rekap performa tengah bulan.','Sedang proses','',0],[13,['nanda','siswanto'],'Target marketplace','Push penjualan minggu 3–4 untuk mengejar target.','2026-05-24','','Peningkatan penjualan terukur.','Belum Mulai','',0],[14,['nanda','siswanto'],'Target marketplace','Finalisasi capaian penjualan marketplace bulan Mei.','2026-05-31','','Target Rp400 juta, 70 unit, 150 merch direkap.','Belum Mulai','',1],[15,['nanda','siswanto'],'Kontrol harga online','Mapping seller aktif dan harga acuan produk.','2026-05-11','2026-05-11','Data seller dan harga acuan rapi.','Selesai','',0],[16,['nanda','siswanto'],'Kontrol harga online','Monitoring harga rutin dan identifikasi harga terlalu rendah.','2026-05-31','','Seller pelanggaran harga terdeteksi.','Sedang proses','',0],[17,['nanda','siswanto'],'Kontrol harga online','Pelaporan seller dan pembelian validasi harga rendah.','2026-05-31','','Bukti pelaporan dan pembelian validasi.','Sedang proses','',0],[18,['nanda','siswanto'],'Kontrol harga online','Rekap kontrol harga dan tindak lanjut bulanan.','2026-05-31','','Rekap bulanan selesai.','Sedang proses','',0],[19,['nanda','siswanto'],'Target TikTok Shop','Review performa TikTok Shop dan breakdown target 30 unit.','2026-05-08','2026-05-08','Target mingguan TikTok Shop tersusun.','Selesai','',0],[20,['nanda','siswanto'],'Target TikTok Shop','Optimasi listing, promo, live support, dan traffic TikTok Shop.','2026-05-14','','Optimasi channel berjalan.','Sedang proses','',1],[21,['nanda','siswanto'],'Target TikTok Shop','Monitoring penjualan TikTok Shop dan evaluasi gap.','2026-05-22','','Capaian tengah bulan terukur.','Belum Mulai','',0],[22,['nanda','siswanto'],'Target TikTok Shop','Final push penjualan hingga target 30 unit sold.','2026-05-31','','Penjualan TikTok Shop direkap.','Belum Mulai','',1],[23,['raihan','awan'],'Desain kartu garansi per type','Mengumpulkan data type produk dan kebutuhan informasi.','2026-05-07','2026-05-07','Data kebutuhan lengkap.','Selesai','Redesign buku garansi per type.',0],[24,['raihan','awan'],'Desain kartu garansi per type','Menyusun struktur layout dan sistem desain kartu garansi.','2026-05-08','2026-05-08','Template master selesai.','Selesai','',0],[25,['raihan','awan'],'Desain kartu garansi per type','Adaptasi desain kartu garansi ke masing-masing type produk.','2026-05-09','2026-05-09','Desain per type selesai.','Selesai','',0],[26,['raihan','awan'],'Desain kartu garansi per type','Finalisasi file master dan file siap produksi.','2026-05-09','2026-05-09','File final rapi dan siap pakai.','Selesai','',1],[27,['raihan','awan'],'Desain material promosi 2D all type','Mapping kebutuhan materi promosi all type.','2026-05-07','2026-05-07','Daftar kebutuhan lengkap.','Selesai','Tracking desain KPI Maret.',0],[28,['raihan','awan'],'Desain material promosi 2D all type','Produksi batch 1 materi promosi 2D.','2026-05-14','2026-05-14','Batch 1 selesai.','Selesai','',0],[29,['raihan','awan'],'Desain material promosi 2D all type','Produksi batch 2 materi promosi 2D.','2026-05-21','','Batch 2 selesai.','Sedang proses','',0],[30,['raihan','awan'],'Desain material promosi 2D all type','Finalisasi seluruh materi promosi dan file distribusi.','2026-05-31','','Materi promosi 2x/minggu terpenuhi.','Belum Mulai','',1],[31,['awan','raihan'],'Desain merchandise baru GODA','Mengumpulkan referensi dan menentukan arah desain merchandise.','2026-05-09','2026-05-09','Arah desain merchandise disepakati.','Selesai','Daftar desain merchandise tersedia.',0],[32,['awan','raihan'],'Desain merchandise baru GODA','Mendesain konsep helm, korek api, laptop sticker, dan polo shirt.','2026-05-17','','Draft desain awal semua item.','Belum Mulai','',0],[33,['awan','raihan'],'Desain merchandise baru GODA','Revisi dan finalisasi desain merchandise prioritas.','2026-05-24','','Desain merchandise siap diajukan.','Belum Mulai','',0],[34,['awan','raihan'],'Desain merchandise baru GODA','Menyiapkan file presentasi/final file untuk approval atau produksi.','2026-05-29','','File final merchandise siap.','Belum Mulai','',1],[35,['zulhaj','roro','nanda'],'Realisasi kerja sama leasing Kreditplus & HCI','Sinkronisasi internal konsep kerja sama, GodaPay by HCI/Goda x HCI Paylater.','2026-05-07','2026-05-07','Konsep final internal siap.','Selesai','Deck konsep sudah tersedia.',1],[36,['zulhaj','roro','nanda'],'Realisasi kerja sama leasing Kreditplus & HCI','Final check deck dan hubungi PIC Kreditplus & HCI.','2026-05-12','2026-05-12','Deck siap dan jadwal meeting tersedia.','Selesai','Jadwal meeting 13/5/2026 sore.',0],[37,['zulhaj','roro','nanda'],'Realisasi kerja sama leasing Kreditplus & HCI','Meeting/follow up partner dan gali kebutuhan data/dokumen.','2026-05-20','','Feedback partner dan daftar kebutuhan data.','Belum Mulai','',0],[38,['zulhaj','roro','nanda'],'Realisasi kerja sama leasing Kreditplus & HCI','Finalisasi tindak lanjut, data, status kerja sama, dan next step.','2026-05-31','','Status akhir bulan dan action plan terdokumentasi.','Belum Mulai','',1],[39,['zulhaj','septian'],'AI Tools Course','Menentukan course, objective belajar, dan output.','2026-05-09','2026-05-09','Course dan target belajar disepakati.','Selesai','Link course tersedia.',0],[40,['zulhaj','septian'],'AI Tools Course','Mengikuti sesi pembelajaran utama dan dokumentasi insight.','2026-05-18','','Progress pembelajaran berjalan.','Belum Mulai','',0],[41,['zulhaj','septian'],'AI Tools Course','Identifikasi tools/workflow yang relevan untuk kerja tim.','2026-05-25','','Shortlist AI tools applicable.','Belum Mulai','',0],[42,['zulhaj','septian'],'AI Tools Course','Rangkuman hasil belajar dan kemungkinan implementasi kerja.','2026-05-31','','Insight course terdokumentasi.','Belum Mulai','',1]
 ].map(a=>({id:a[0],pic:a[1],name:a[2],detail:a[3],deadline:a[4],completedAt:a[5],output:a[6],status:a[7],note:a[8],impact:!!a[9]}));
-const state={activeTab:'team',activePerson:'zulhaj',selectedMissionId:null,currentUser:null,todoTarget:null}; 
+const state={
+  activeTab:'team',
+  activePerson:'zulhaj',
+  selectedMissionId:null,
+  currentUser:null,
+  todoTarget:null,
+  editTodoId:null
+};
 const $=id=>document.getElementById(id); 
 let pmap=Object.fromEntries(people.map(p=>[p.id,p])); 
 const labels={'2026-05':'Mei 2026','2026-06':'Juni 2026','2026-07':'Juli 2026','2026-08':'Agustus 2026','2026-09':'September 2026','2026-10':'Oktober 2026','2026-11':'November 2026','2026-12':'Desember 2026'};
@@ -506,8 +513,35 @@ async function saveMission(){
   renderAll();
   closeMission();
 }
-function openTodoModal(){if(!(state.currentUser===state.activePerson||state.currentUser==='zulhaj'))return;state.todoTarget=state.activePerson;$('todoTitle').value='';$('todoDeadline').value='';$('todoStatus').value='backlog';$('todoPriority').value='medium';$('todoCategory').value='Daily';$('todoRequester').value=personDisplay(state.currentUser).name;$('todoDescription').value='';$('todoModal').classList.add('show')}
-function closeTodoModal(){$('todoModal').classList.remove('show');state.todoTarget=null}
+function openTodoModal(todoId = null){
+  if (!(state.currentUser === state.activePerson || state.currentUser === 'zulhaj')) return;
+
+  state.todoTarget = state.activePerson;
+  state.editTodoId = todoId;
+
+  const existing = todoId
+    ? todosData.find(t => t.dbId === todoId)
+    : null;
+
+  $('todoModalTitle').textContent = existing ? 'Edit To Do' : 'Tambah To Do';
+
+  $('todoTitle').value = existing ? existing.title || '' : '';
+  $('todoDeadline').value = existing ? existing.deadline || '' : '';
+  $('todoStatus').value = existing ? existing.status || 'backlog' : 'backlog';
+  $('todoPriority').value = existing ? existing.priority || 'medium' : 'medium';
+  $('todoCategory').value = existing ? existing.category || 'Daily' : 'Daily';
+  $('todoRequester').value = existing
+    ? existing.requester || ''
+    : personDisplay(state.currentUser).name;
+  $('todoDescription').value = existing ? existing.description || '' : '';
+
+  $('todoModal').classList.add('show');
+}
+function closeTodoModal(){
+  $('todoModal').classList.remove('show');
+  state.todoTarget = null;
+  state.editTodoId = null;
+}
 async function saveTodo(){
   let target = state.todoTarget || state.activePerson;
 
@@ -516,31 +550,14 @@ async function saveTodo(){
   let title = $('todoTitle').value.trim();
   if (!title) return;
 
-  const currentPeriodCode = period();
+  const currentProfile = pmap[state.currentUser];
 
-  const { data: periodRow, error: periodError } = await supabaseClient
-    .from("periods")
-    .select("id")
-    .eq("code", currentPeriodCode)
-    .single();
-
-  if (periodError) {
-    console.error("Todo period error:", periodError);
-    alert("Gagal membaca periode: " + periodError.message);
-    return;
-  }
-
-  const ownerProfile = pmap[target];
-  const creatorProfile = pmap[state.currentUser];
-
-  if (!ownerProfile?.dbId || !creatorProfile?.dbId) {
+  if (!currentProfile?.dbId) {
     alert("Profile ID belum lengkap. Coba refresh dashboard setelah login.");
     return;
   }
 
   const payload = {
-    period_id: periodRow.id,
-    owner_id: ownerProfile.dbId,
     title: title,
     deadline: $('todoDeadline').value || null,
     status: $('todoStatus').value,
@@ -548,14 +565,54 @@ async function saveTodo(){
     category: $('todoCategory').value,
     requester: $('todoRequester').value.trim(),
     description: $('todoDescription').value.trim(),
-    created_by: creatorProfile.dbId,
-    updated_by: creatorProfile.dbId,
+    updated_by: currentProfile.dbId,
     updated_at: new Date().toISOString()
   };
 
-  const { error } = await supabaseClient
-    .from("todos")
-    .insert(payload);
+  let error;
+
+  if (state.editTodoId) {
+    const result = await supabaseClient
+      .from("todos")
+      .update(payload)
+      .eq("id", state.editTodoId);
+
+    error = result.error;
+  } else {
+    const currentPeriodCode = period();
+
+    const { data: periodRow, error: periodError } = await supabaseClient
+      .from("periods")
+      .select("id")
+      .eq("code", currentPeriodCode)
+      .single();
+
+    if (periodError) {
+      console.error("Todo period error:", periodError);
+      alert("Gagal membaca periode: " + periodError.message);
+      return;
+    }
+
+    const ownerProfile = pmap[target];
+
+    if (!ownerProfile?.dbId) {
+      alert("Owner profile ID belum lengkap. Coba refresh dashboard setelah login.");
+      return;
+    }
+
+    const insertPayload = {
+      ...payload,
+      period_id: periodRow.id,
+      owner_id: ownerProfile.dbId,
+      created_by: currentProfile.dbId
+    };
+
+    const result = await supabaseClient
+      .from("todos")
+      .insert(insertPayload);
+
+    error = result.error;
+  }
 
   if (error) {
     console.error("Save todo error:", error);
@@ -638,6 +695,14 @@ if(del){
   renderIndividualRoom();
   renderAllCore();
   return;
+
+  let editTodo = e.target.closest('[data-edit-todo]');
+if(editTodo && !e.target.closest('input') && !e.target.closest('button')){
+  if (!(state.currentUser === state.activePerson || state.currentUser === 'zulhaj')) return;
+
+  openTodoModal(editTodo.dataset.editTodo);
+  return;
+}
 }if(e.target.id==='sendProgressBtn'){if(state.currentUser!==state.activePerson)return;let text=$('progressText').value.trim();if(!text)return;updRoom(state.activePerson,r=>r.progress.push({authorId:state.currentUser,text,createdAt:new Date().toISOString()}));return}if(e.target.id==='sendMessageBtn'){let text=$('messageText').value.trim();if(!text||!state.currentUser)return;updRoom(state.activePerson,r=>r.messages.push({authorId:state.currentUser,text,createdAt:new Date().toISOString()}));return}let delMsg=e.target.closest('[data-delete-message]');if(delMsg){let i=+delMsg.dataset.deleteMessage;updRoom(state.activePerson,r=>{let msg=r.messages[i];if(msg&&(msg.authorId===state.currentUser||state.currentUser==='zulhaj'))r.messages.splice(i,1)});return}let delProgress=e.target.closest('[data-delete-progress]');if(delProgress){if(state.currentUser!=='zulhaj')return;let i=+delProgress.dataset.deleteProgress;updRoom(state.activePerson,r=>{if(r.progress[i])r.progress.splice(i,1)});return}let delHelp=e.target.closest('[data-delete-help]');if(delHelp){if(state.currentUser!=='zulhaj')return;let i=+delHelp.dataset.deleteHelp;updRoom(state.activePerson,r=>{if(r.helps[i])r.helps.splice(i,1)});return}if(e.target.id==='saveHelpBtn'){if(state.currentUser!==state.activePerson)return;let helperId=$('helperSelect').value,text=$('helpText').value.trim();if(!helperId)return;updRoom(state.activePerson,r=>r.helps.push({helperId,text:text||`Membantu ${pmap[state.activePerson].name}`,createdAt:new Date().toISOString()}));return}if(e.target.id==='saveMoodBtn'){if(state.currentUser!==state.activePerson)return;updRoom(state.activePerson,r=>r.mood.push({authorId:state.currentUser,mood:$('moodSelect').value,workload:$('workloadSelect').value,blocker:$('blockerText').value.trim(),createdAt:new Date().toISOString()}));return}};$('individualRoom').onkeydown=e=>{if(e.target.id==='todoTitle'&&e.key==='Enter'&&$('saveTodoBtn')){$('saveTodoBtn').click()}}}
 async function init() {
   fillFilters();
