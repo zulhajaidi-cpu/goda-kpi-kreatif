@@ -108,6 +108,8 @@ function moodLabel(v){return {happy:'😊 Happy',sad:'😢 Sad',tired:'😩 Tire
 function todoStatusLabel(v){return {backlog:'Backlog',process:'Process',review:'Review',done:'Done',cancel:'Cancel'}[v]||v}
 function todoPriorityLabel(v){return {high:'High',medium:'Medium',low:'Low'}[v]||v}
 function current(){return personDisplay(state.currentUser||'zulhaj')}
+function fallbackId(prefix){return prefix+'-'+Date.now()+'-'+Math.random().toString(16).slice(2)}
+function refreshRoomFast(){renderIndividualRoom();renderAllCore();applyReadonlyMode()}
 function isGuest(){return (authProfile?.username||state.currentUser)==='guest'}
 function canWrite(){return !isGuest()}
 function resolveLogin(username,password){let store=profileStore();for(let id of Object.keys(store)){let pr=store[id];if(pr.username&&pr.password&&pr.username.toLowerCase()===username&&pr.password===password)return {personId:id}}let a=accounts[username];if(!a)return null;let override=store[a.personId];if(override&&(override.username||override.password))return null;return a.password===password?a:null}
@@ -662,7 +664,12 @@ async function saveMission(){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
+  Object.assign(m, {
+    status: newStatus,
+    deadline: newDeadline || "",
+    completedAt: newCompletedAt || "",
+    note: newNote
+  });
 
   renderAll();
   closeMission();
@@ -725,6 +732,7 @@ async function saveTodo(){
   };
 
   let error;
+  let insertedTodo = null;
 
   if (state.editTodoId) {
     const result = await supabaseClient
@@ -764,9 +772,12 @@ async function saveTodo(){
 
     const result = await supabaseClient
       .from("todos")
-      .insert(insertPayload);
+      .insert(insertPayload)
+      .select("id, created_at")
+      .single();
 
     error = result.error;
+    insertedTodo = result.data;
   }
 
   if (error) {
@@ -775,11 +786,36 @@ async function saveTodo(){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
+  if (state.editTodoId) {
+    let todo = todosData.find(t => String(t.dbId) === String(state.editTodoId));
+    if (todo) Object.assign(todo, {
+      title: payload.title,
+      deadline: payload.deadline || "",
+      status: payload.status,
+      priority: payload.priority,
+      category: payload.category,
+      requester: payload.requester,
+      description: payload.description
+    });
+  } else {
+    todosData.unshift({
+      dbId: insertedTodo?.id || fallbackId('todo'),
+      ownerUsername: target,
+      title: payload.title,
+      description: payload.description || "",
+      deadline: payload.deadline || "",
+      status: payload.status || "backlog",
+      priority: payload.priority || "medium",
+      category: payload.category || "Daily",
+      requester: payload.requester || "",
+      createdByUsername: state.currentUser,
+      createdByName: currentProfile.name || personDisplay(state.currentUser).name,
+      createdAt: insertedTodo?.created_at || new Date().toISOString()
+    });
+  }
 
   closeTodoModal();
-  renderIndividualRoom();
-  renderAllCore();
+  refreshRoomFast();
 }
 function openProfileModal(){if(!state.currentUser||isGuest())return;let c=current();$('profileName').value=c.name||'';$('profileBio').value=c.bio||'';$('profilePhoto').value='';$('profilePreview').innerHTML=avatarHtml(state.currentUser,'avatar');$('profileError').textContent='';$('profileModal').classList.add('show')}
 function closeProfileModal(){$('profileModal').classList.remove('show')}
@@ -806,8 +842,17 @@ async function saveProfile(){
 
   if(error){$('profileError').textContent='Gagal menyimpan profil: '+error.message;return}
 
-  await loadDashboardDataFromSupabase();
-  await renderAuth();
+  Object.assign(pmap[id], {
+    name,
+    bio,
+    photo: payload.avatar_url || pmap[id].photo || ""
+  });
+  if (authProfile) {
+    authProfile.full_name = name;
+    authProfile.bio = bio;
+    if (payload.avatar_url) authProfile.avatar_url = payload.avatar_url;
+  }
+  $('currentUserBadge').innerHTML = `<span class="miniava ${safeCls(authProfile?.color_class || pmap[id].cls || 'neutral')}">${esc(authProfile?.initials || pmap[id].initials || '?')}</span><span>${esc(name)}</span>`;
   closeProfileModal();
   renderAll();
 }
@@ -862,9 +907,9 @@ if(t){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-  renderIndividualRoom();
-  renderAllCore();
+  let localTodo = todosData.find(x => String(x.dbId) === String(todoId));
+  if (localTodo) localTodo.status = t.checked ? "done" : "process";
+  refreshRoomFast();
   return;
 }let del=e.target.closest('[data-delete-todo]');
 if(del){
@@ -883,9 +928,8 @@ if(del){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-  renderIndividualRoom();
-  renderAllCore();
+  todosData = todosData.filter(x => String(x.dbId) !== String(todoId));
+  refreshRoomFast();
   return;
 }
 
@@ -923,14 +967,16 @@ if(editTodo && !e.target.closest('input') && !e.target.closest('button')){
     return;
   }
 
-  const { error } = await supabaseClient
+  const { data: insertedProgress, error } = await supabaseClient
     .from("progress_updates")
     .insert({
       period_id: periodRow.id,
       owner_id: ownerProfile.dbId,
       text,
       created_by: creatorProfile.dbId
-    });
+    })
+    .select("id, created_at")
+    .single();
 
   if (error) {
     console.error("Save progress error:", error);
@@ -938,10 +984,19 @@ if(editTodo && !e.target.closest('input') && !e.target.closest('button')){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-
-  renderIndividualRoom();
-  renderAllCore();
+  progressData.push({
+    dbId: insertedProgress?.id || fallbackId('progress'),
+    ownerUsername: state.activePerson,
+    text,
+    createdByUsername: state.currentUser,
+    createdByName: creatorProfile.name || personDisplay(state.currentUser).name,
+    createdByRole: creatorProfile.role || "",
+    createdByInitials: creatorProfile.initials || "?",
+    createdByClass: creatorProfile.cls || "neutral",
+    createdAt: insertedProgress?.created_at || new Date().toISOString()
+  });
+  $('progressText').value = '';
+  refreshRoomFast();
   return;
 }
 
@@ -962,10 +1017,8 @@ if(delProgress){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-
-  renderIndividualRoom();
-  renderAllCore();
+  progressData = progressData.filter(x => String(x.dbId) !== String(progressId));
+  refreshRoomFast();
   return;
 }
 
@@ -993,9 +1046,11 @@ if(e.target.id==='sendMessageBtn'){
     return;
   }
 
-  const { error } = await supabaseClient
+  const { data: insertedMessage, error } = await supabaseClient
     .from("team_messages")
-    .insert({period_id: periodRow.id, owner_id: ownerProfile.dbId, author_id: authorProfile.dbId, text});
+    .insert({period_id: periodRow.id, owner_id: ownerProfile.dbId, author_id: authorProfile.dbId, text})
+    .select("id, created_at")
+    .single();
 
   if (error) {
     console.error("Save message error:", error);
@@ -1003,9 +1058,17 @@ if(e.target.id==='sendMessageBtn'){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-  renderIndividualRoom();
-  renderAllCore();
+  teamMessagesData.push({
+    dbId: insertedMessage?.id || fallbackId('message'),
+    ownerUsername: state.activePerson,
+    authorId: state.currentUser,
+    authorName: authorProfile.name || personDisplay(state.currentUser).name,
+    authorRole: authorProfile.role || "",
+    text,
+    createdAt: insertedMessage?.created_at || new Date().toISOString()
+  });
+  $('messageText').value = '';
+  refreshRoomFast();
   return;
 }
 
@@ -1022,9 +1085,8 @@ if(delMessage){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-  renderIndividualRoom();
-  renderAllCore();
+  teamMessagesData = teamMessagesData.filter(x => String(x.dbId) !== String(messageId));
+  refreshRoomFast();
   return;
 }
 
@@ -1055,9 +1117,11 @@ if(e.target.id==='saveHelpBtn'){
     return;
   }
 
-  const { error } = await supabaseClient
+  const { data: insertedHelp, error } = await supabaseClient
     .from("help_logs")
-    .insert({period_id: periodRow.id, owner_id: ownerProfile.dbId, helper_id: helperProfile.dbId, text});
+    .insert({period_id: periodRow.id, owner_id: ownerProfile.dbId, helper_id: helperProfile.dbId, text})
+    .select("id, created_at")
+    .single();
 
   if (error) {
     console.error("Save help error:", error);
@@ -1065,9 +1129,17 @@ if(e.target.id==='saveHelpBtn'){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-  renderIndividualRoom();
-  renderAllCore();
+  helpLogsData.push({
+    dbId: insertedHelp?.id || fallbackId('help'),
+    ownerUsername: state.activePerson,
+    helperId,
+    helperName: helperProfile.name || personDisplay(helperId).name,
+    helperRole: helperProfile.role || "",
+    text,
+    createdAt: insertedHelp?.created_at || new Date().toISOString()
+  });
+  $('helpText').value = '';
+  refreshRoomFast();
   return;
 }
 
@@ -1083,9 +1155,8 @@ if(delHelp){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-  renderIndividualRoom();
-  renderAllCore();
+  helpLogsData = helpLogsData.filter(x => String(x.dbId) !== String(helpId));
+  refreshRoomFast();
   return;
 }
 
@@ -1111,15 +1182,19 @@ if(e.target.id==='saveMoodBtn'){
     return;
   }
 
-  const { error } = await supabaseClient
+  const moodPayload = {
+    period_id: periodRow.id,
+    owner_id: ownerProfile.dbId,
+    mood: $('moodSelect').value,
+    workload: $('workloadSelect').value,
+    blocker: $('blockerText').value.trim()
+  };
+
+  const { data: insertedMood, error } = await supabaseClient
     .from("mood_checkins")
-    .insert({
-      period_id: periodRow.id,
-      owner_id: ownerProfile.dbId,
-      mood: $('moodSelect').value,
-      workload: $('workloadSelect').value,
-      blocker: $('blockerText').value.trim()
-    });
+    .insert(moodPayload)
+    .select("id, created_at")
+    .single();
 
   if (error) {
     console.error("Save mood error:", error);
@@ -1127,9 +1202,16 @@ if(e.target.id==='saveMoodBtn'){
     return;
   }
 
-  await loadDashboardDataFromSupabase();
-  renderIndividualRoom();
-  renderAllCore();
+  moodCheckinsData.push({
+    dbId: insertedMood?.id || fallbackId('mood'),
+    ownerUsername: state.activePerson,
+    mood: moodPayload.mood || "flat",
+    workload: moodPayload.workload || "Aman",
+    blocker: moodPayload.blocker || "",
+    createdAt: insertedMood?.created_at || new Date().toISOString()
+  });
+  $('blockerText').value = '';
+  refreshRoomFast();
   return;
 }
 
