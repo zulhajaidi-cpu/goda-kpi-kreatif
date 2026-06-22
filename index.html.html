@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
@@ -627,8 +627,8 @@ function questItems(){let ms=missions(),done=ms.filter(m=>m.status==='Selesai').
   {title:'Creative Sprint',subtitle:'10 output selesai dalam 1 minggu',clear:weekDone>=10,stat:weekDone+'/10 output',detail:'Sprint ini buat momentum kreatif. Saat banyak output selesai dalam satu minggu, energi tim biasanya ikut naik karena hasilnya kelihatan nyata.',tip:'Cocok dipakai saat banyak materi kecil: batching, review cepat, lalu gas publish atau final file.'}
 ]}
 function rewardItems(){let mvp=mvpId(),all=missions().length&&missions().every(m=>m.status==='Selesai'),coffee=[];people.filter(p=>p.id!=='zulhaj').forEach(p=>{let b=badges(p.id,mvp).map(x=>x[0]);if(b.includes('Fast Finisher')||b.includes('Consistency Player'))coffee.push(p.name)});return [
-  {title:'Free Kopi Kalcer',winner:coffee.join(', '),hint:'Badge Fast Finisher & Consistency Player',detail:'Reward kecil buat yang geraknya sat-set atau konsisten update. Kopinya bukan cuma kopi, tapi tanda kalau effort rapi dan disiplin itu kelihatan.',tip:'Cara ngejarnya: selesai sebelum deadline, rajin update progress, dan jangan biarin task menghilang tanpa kabar.'},
-  {title:'Merchandise Special',winner:mvp?pmap[mvp].name:'',hint:'MVP',detail:'Merch special buat player dengan performa paling kuat bulan ini. Hitungannya bukan cuma ramai, tapi score, EXP, task clear, bantuan, dan speed.',tip:'Yang dicari: kontribusi stabil, bantu tim, dan tetap beresin mission utama.'},
+  {title:'Mini Cake',winner:coffee.join(', '),hint:'Badge Fast Finisher & Consistency Player',detail:'Reward kecil buat yang geraknya sat-set atau konsisten update. Kopinya bukan cuma kopi, tapi tanda kalau effort rapi dan disiplin itu kelihatan.',tip:'Cara ngejarnya: selesai sebelum deadline, rajin update progress, dan jangan biarin task menghilang tanpa kabar.'},
+  {title:'Mystery Gift from Sponsor Pak Yus',winner:mvp?pmap[mvp].name:'',hint:'MVP',detail:'Merch special buat player dengan performa paling kuat bulan ini. Hitungannya bukan cuma ramai, tapi score, EXP, task clear, bantuan, dan speed.',tip:'Yang dicari: kontribusi stabil, bantu tim, dan tetap beresin mission utama.'},
   {title:'100% Mission Clear',winner:all?'Team':'',hint:'Makan - makan bebas milih',detail:'Kalau semua mission bulan ini tuntas, tim pantas rayain bareng. Ini reward kolektif, jadi menangnya satu tim, bukan cuma satu orang.',tip:'Biar tembus, pantau deadline alert dan saling backup sebelum task berubah jadi panik.'}
 ]}
 function renderQuest(){$('teamQuestList').innerHTML=questItems().map((q,i)=>`<div class="quest" data-quest-detail="${i}" role="button" tabindex="0"><div class="head" style="margin:0"><b>${esc(q.title)}</b><span class="pill ${q.clear?'ok':'neutral'}">${q.clear?'Clear':'Progress'}</span></div><div class="hint">${esc(q.subtitle)} - ${esc(q.stat)}</div></div>`).join('')}
@@ -1333,4 +1333,5 @@ init();
 </script>
 </body>
 </html>
+
 
